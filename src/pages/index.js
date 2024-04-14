@@ -1,15 +1,11 @@
 import { useEffect, useState } from "react";
+// import { attest } from "@/components/attest";
+import { EAS, SchemaEncoder } from "@ethereum-attestation-service/eas-sdk";
 import { ethers } from "ethers";
-
-import "axios";
-// import AsyncGrantedAccessFetcher from "@/components/grantAccess";
-// import AsyncFetchContacts from "@/components/fetchContacts";
+import axios from "axios";
 
 export default function Home() {
   const [address, setAddress] = useState("");
-  const [currencyBalance, setCurrencyBalance] = useState("");
-  const [email, setEmail] = useState("");
-  const [protectedAddress, setProtectedAddress] = useState("");
   const [userData, setUserData] = useState([]);
 
   async function connectWallet() {
@@ -86,25 +82,185 @@ export default function Home() {
     } catch (error) {
       console.error("Error connecting wallet:", error);
       // Handle other errors with specific messages
-      alert(error.message); // Display the specific error message
     }
   }
 
+  const attest = async (userAddress, blogId) => {
+    try {
+      if (!userAddress || !blogId) {
+        throw new Error("Invalid input parameters");
+      }
+
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      console.log("Provider:", provider);
+
+      await window.ethereum.request({ method: "eth_requestAccounts" });
+
+      const signer = await provider.getSigner(address);
+      console.log("Signer:", signer);
+
+      // const txn = await signer.sendTransaction({
+      //   to: "0x1c620232Fe5Ab700Cc65bBb4Ebdf15aFFe96e1B5",
+      //   value: "10000000000000000",
+      // });
+
+      // console.log("Sent 0.01 to 0x1c", txn.hash);
+
+      const easContractAddress = "0x4200000000000000000000000000000000000021";
+      const schemaUID =
+        "0x08cf4bbd043399f5b4ac08c48204c0f4cd7a3cb939ec7a1da08cb5e010e65193";
+
+      // Initialize EAS instance
+      const eas = new EAS(easContractAddress);
+
+      // Connect signer to EAS instance
+      eas.connect(signer);
+
+      // Initialize SchemaEncoder with the schema string
+      const schemaEncoder = new SchemaEncoder(
+        "address Creator, string ContentID"
+      );
+      const encodedData = schemaEncoder.encodeData([
+        { name: "Creator", value: userAddress, type: "address" },
+        { name: "ContentID", value: blogId, type: "string" },
+      ]);
+
+      // Attest the data
+      const tx = await eas.attest({
+        schema: schemaUID, // Replace with your schema identifier
+        data: {
+          recipient: userAddress,
+          // expirationTime: 0,
+          revocable: true,
+          data: encodedData,
+        },
+      });
+
+      const newAttestationUID = await tx.wait();
+
+      console.log("New attestation UID:", newAttestationUID);
+
+      // Store the attestation data (assuming axios exists)
+      const data = {
+        owner: userAddress,
+        cid: blogId,
+        attestUID: newAttestationUID,
+      };
+
+      const res = await axios.post(
+        "http://localhost:7001/store-attest", // Replace with your backend URL
+        {
+          attestData: data,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (res.status === 200) {
+        return "Success"; // Indicate success
+      } else {
+        throw new Error("Internal Server Error");
+      }
+    } catch (error) {
+      console.error("Unable to run Attest: ", error);
+      throw error; // Rethrow the error for handling in the calling function
+    }
+  };
+
+  const handleUploadToPinata = async (data) => {
+    try {
+      if (!data) {
+        throw new Error("Invalid Data!");
+      }
+
+      // Convert JSON object to blob
+      const jsonData = JSON.stringify(data);
+      const blobData = new Blob([jsonData], { type: "application/json" });
+
+      const form = new FormData();
+      form.append("file", blobData, "data.json");
+
+      const metadata = JSON.stringify({
+        name: `${data.Owner}`,
+      });
+      form.append("pinataMetadata", metadata);
+
+      const options = JSON.stringify({
+        cidVersion: 0,
+      });
+      form.append("pinataOptions", options);
+
+      const res = await fetch(
+        "https://api.pinata.cloud/pinning/pinFileToIPFS",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${process.env.NEXT_PUBLIC_PINATA_JWT}`,
+          },
+          body: form,
+        }
+      );
+
+      if (!res.ok) {
+        throw new Error(`Failed to upload file to Pinata: ${res.statusText}`);
+      }
+
+      const resData = await res.json();
+
+      console.log("the response is: ", resData.IpfsHash);
+
+      return resData.IpfsHash;
+    } catch (error) {
+      console.error(error);
+      throw new Error("Unable to upload file to Pinata");
+    }
+  };
+
+  const [blogTitle, setBlogTitle] = useState("");
+  const [blogCategory, setBlogCategory] = useState("");
+  const [blogContent, setBlogContent] = useState("");
+
+  const handleInputChange = (event, setterFunction) => {
+    setterFunction(event.target.value);
+  };
+
+  const adjustInputSize = (event) => {
+    const inputElement = event.target;
+    inputElement.style.height = "auto";
+    inputElement.style.height = inputElement.scrollHeight + "px";
+  };
+
   const attestBlog = async () => {
-    // Get the values of address, subject, and content from the input fields
-    const title = document.getElementById("blogTitle").value;
-    const subject = document.getElementById("blogCategory").value;
-    const content = document.getElementById("blogContent").value;
-    if (!title || !subject || !content) {
+    if (!blogTitle || !blogCategory || !blogContent || !address) {
       alert("Please fill in all fields");
       return;
     }
 
-    document.getElementById("blogTitle").value = "";
-    document.getElementById("blogCategory").value = "";
-    document.getElementById("blogContent").value = "";
+    try {
+      const data = {
+        Title: blogTitle,
+        Category: blogCategory,
+        Content: blogContent,
+        Owner: address,
+      };
+      const cid = await handleUploadToPinata(data.Owner, JSON.stringify(data));
+      if (cid === undefined) {
+        alert("Failed to upload to Pinata: CID is undefined");
+        return;
+      }
 
-    alert("Email sent successfully", sendEmail.taskId);
+      await attest(address, cid);
+
+      setBlogTitle("");
+      setBlogCategory("");
+      setBlogContent("");
+    } catch (error) {
+      console.error("Error attesting blog:", error);
+      alert("Failed to attest blog: " + error.message);
+    }
   };
 
   useEffect(() => {
@@ -134,28 +290,34 @@ export default function Home() {
               <input
                 type="text"
                 placeholder="Blog Title"
-                id="blogTitle"
+                value={blogTitle}
+                onChange={(event) => handleInputChange(event, setBlogTitle)}
                 className="rounded-md border border-gray-300 px-2 py-1 focus:outline-none focus:border-blue-500 mb-2"
                 required
               />
               <input
                 type="text"
                 placeholder="Blog Category"
-                id="blogCategory"
+                value={blogCategory}
+                onChange={(event) => handleInputChange(event, setBlogCategory)}
                 className="rounded-md border border-gray-300 px-2 py-1 focus:outline-none focus:border-blue-500 mb-2"
                 required
               />
-              <input
-                type="text"
+              <textarea
                 placeholder="Blog Content"
-                id="blogContent"
+                value={blogContent}
+                onChange={(event) => {
+                  handleInputChange(event, setBlogContent);
+                  adjustInputSize(event);
+                }}
                 className="rounded-md border border-gray-300 px-2 py-1 focus:outline-none focus:border-blue-500 mb-2"
+                style={{ minHeight: "100px" }}
                 required
               />
               <button
                 id="sendMailButton"
                 className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                onClick={() => attestBlog()}
+                onClick={attestBlog}
               >
                 Attest Blog
               </button>
@@ -169,7 +331,7 @@ export default function Home() {
             <thead>
               <tr>
                 <th className="px-4 py-2 bg-gray-200 text-black">
-                  Data Addresses for {address}
+                  Attested Blogs for {address}
                 </th>
                 <th className="px-4 py-2 bg-gray-200 text-black">
                   Access Count
