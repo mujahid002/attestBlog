@@ -19,5 +19,18 @@ const fetchBlogAttest = async () => {
 
   return blogAttents;
 };
+const fetchUserBlogAttest = async (userAddress) => {
+  const client = await connectMongo();
+  const db = client.db("attest");
+  const collection = db.collection("blog");
 
-module.exports = { storeBlogAttest, fetchBlogAttest };
+  const blogAttents = await collection
+    .find({ recipient: userAddress })
+    .toArray();
+
+  await client.close();
+
+  return blogAttents;
+};
+
+module.exports = { storeBlogAttest, fetchBlogAttest, fetchUserBlogAttest };
