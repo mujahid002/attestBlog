@@ -9,7 +9,6 @@ import axios from "axios";
 
 export default function Home() {
   const [address, setAddress] = useState("");
-  const [userData, setUserData] = useState([]);
 
   async function connectWallet() {
     try {
@@ -173,21 +172,19 @@ export default function Home() {
     }
   };
 
-  const handleUploadToPinata = async (data) => {
+  const handleUploadToPinata = async (fileName, data) => {
     try {
       if (!data) {
         throw new Error("Invalid Data!");
       }
 
-      // Convert JSON object to blob
-      const jsonData = JSON.stringify(data);
-      const blobData = new Blob([jsonData], { type: "application/json" });
+      const blobData = new Blob([data], { type: "application/json" });
 
       const form = new FormData();
       form.append("file", blobData, "data.json");
 
       const metadata = JSON.stringify({
-        name: `${data.Owner}`,
+        name: fileName,
       });
       form.append("pinataMetadata", metadata);
 
@@ -222,27 +219,30 @@ export default function Home() {
     }
   };
 
-  const [blogTitle, setBlogTitle] = useState("");
-  const [blogCategory, setBlogCategory] = useState("");
-  const [blogContent, setBlogContent] = useState("");
+  // const [blogTitle, setBlogTitle] = useState("");
+  // const [blogCategory, setBlogCategory] = useState("");
+  // const [blogContent, setBlogContent] = useState("");
 
-  const handleInputChange = (event, setterFunction) => {
-    setterFunction(event.target.value);
-  };
+  // const handleInputChange = (event, setterFunction) => {
+  //   setterFunction(event.target.value);
+  // };
 
-  const adjustInputSize = (event) => {
-    const inputElement = event.target;
-    inputElement.style.height = "auto";
-    inputElement.style.height = inputElement.scrollHeight + "px";
-  };
+  // const adjustInputSize = (event) => {
+  //   const inputElement = event.target;
+  //   inputElement.style.height = "auto";
+  //   inputElement.style.height = inputElement.scrollHeight + "px";
+  // };
 
   const attestBlog = async () => {
-    if (!blogTitle || !blogCategory || !blogContent || !address) {
-      alert("Please fill in all fields");
-      return;
-    }
-
     try {
+      const blogTitle = document.getElementById("blogTitle").value;
+      const blogCategory = document.getElementById("blogCategory").value;
+      const blogContent = document.getElementById("blogContent").value;
+      if (!blogTitle || !blogCategory || !blogContent || !address) {
+        alert("Please fill in all fields");
+        return;
+      }
+      alert(`The data is:  ${blogTitle}`);
       const data = {
         Title: blogTitle,
         Category: blogCategory,
@@ -257,17 +257,34 @@ export default function Home() {
 
       await attest(address, cid);
 
-      setBlogTitle("");
-      setBlogCategory("");
-      setBlogContent("");
+      await fetchUserData();
+
+      document.getElementById("blogTitle").value = "";
+      document.getElementById("blogCategory").value = "";
+      document.getElementById("blogContent").value = "";
     } catch (error) {
       console.error("Error attesting blog:", error);
       alert("Failed to attest blog: " + error.message);
     }
   };
+  const [userData, setUserData] = useState([]);
+
+  const fetchUserData = async () => {
+    try {
+      const data = await axios.get(`http://localhost:7001/fetch-blog-attests`);
+      if (!data) {
+        return;
+      }
+      console.log("fetched data", data);
+      setUserData(data.data);
+    } catch (error) {
+      console.error("Unable to run fetchUserData function: ", error);
+    }
+  };
 
   useEffect(() => {
     connectWallet();
+    fetchUserData();
   }, [address]);
 
   return (
@@ -292,27 +309,24 @@ export default function Home() {
             <div className="flex flex-col text-black">
               <input
                 type="text"
+                id="blogTitle"
                 placeholder="Blog Title"
-                value={blogTitle}
-                onChange={(event) => handleInputChange(event, setBlogTitle)}
+                // onChange={(event) => handleInputChange(event, setBlogTitle)}
                 className="rounded-md border border-gray-300 px-2 py-1 focus:outline-none focus:border-blue-500 mb-2"
                 required
               />
               <input
                 type="text"
+                id="blogCategory"
                 placeholder="Blog Category"
-                value={blogCategory}
-                onChange={(event) => handleInputChange(event, setBlogCategory)}
+                // onChange={(event) => handleInputChange(event, setBlogCategory)}
                 className="rounded-md border border-gray-300 px-2 py-1 focus:outline-none focus:border-blue-500 mb-2"
                 required
               />
-              <textarea
+              <input
+                type="text"
+                id="blogContent"
                 placeholder="Blog Content"
-                value={blogContent}
-                onChange={(event) => {
-                  handleInputChange(event, setBlogContent);
-                  adjustInputSize(event);
-                }}
                 className="rounded-md border border-gray-300 px-2 py-1 focus:outline-none focus:border-blue-500 mb-2"
                 style={{ minHeight: "100px" }}
                 required
@@ -334,20 +348,39 @@ export default function Home() {
             <thead>
               <tr>
                 <th className="px-4 py-2 bg-gray-200 text-black">
-                  Attested Blogs for {address}
+                  All Attested Blogs
                 </th>
-                <th className="px-4 py-2 bg-gray-200 text-black">
-                  Access Count
-                </th>
+                {/* <th className="px-4 py-2 bg-gray-200 text-black">
+                  Attested Blogs for {address.slice(0, 4)}...
+                  {address.slice(-4)}
+                </th> */}
+                <th className="px-4 py-2 bg-gray-200 text-black">Data</th>
+                {/* <th className="px-4 py-2 bg-gray-200 text-black">
+                  AttestationUIDs
+                </th> */}
               </tr>
             </thead>
             <tbody>
               {Array.isArray(userData) && userData.length > 0 ? (
                 userData.map((data, index) => (
                   <tr key={index}>
-                    <td className="border px-4 py-2">{data.address}</td>
+                    <td className="border px-4 py-2 text-center">
+                      {index + 1}
+                    </td>
                     <td className="border px-4 py-2">
-                      {/* <AsyncGrantedAccessFetcher dataAddress={data.address} /> */}
+                      {data.attestData ? (
+                        <div>
+                          <div>
+                            <strong>CID:</strong> {data.attestData.cid}
+                          </div>
+                          <div>
+                            <strong>Attest UID:</strong>{" "}
+                            {data.attestData.attestUID}
+                          </div>
+                        </div>
+                      ) : (
+                        "No attest data available"
+                      )}
                     </td>
                   </tr>
                 ))
