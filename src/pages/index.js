@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 // import { attest } from "@/components/attest";
-import { EAS, SchemaEncoder } from "@ethereum-attestation-service/eas-sdk";
+import {
+  EAS as EAS150,
+  SchemaEncoder,
+} from "@ethereum-attestation-service/eas-sdk";
 import { ethers } from "ethers";
 import axios from "axios";
 
@@ -111,7 +114,7 @@ export default function Home() {
         "0x08cf4bbd043399f5b4ac08c48204c0f4cd7a3cb939ec7a1da08cb5e010e65193";
 
       // Initialize EAS instance
-      const eas = new EAS(easContractAddress);
+      const eas = new EAS150(easContractAddress);
 
       // Connect signer to EAS instance
       eas.connect(signer);
