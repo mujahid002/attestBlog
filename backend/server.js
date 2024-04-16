@@ -28,14 +28,16 @@ app.get("/fetch-blog-attests", async (req, res) => {
     return res.status(500).send("Internal server error");
   }
 });
-app.get("/fetch-user-blog-attests/:userAddress", async (req, res) => {
+app.get("/fetch-user-attests/:userAddress", async (req, res) => {
   try {
     const { userAddress } = req.params;
-    if (!userAddress) {
-      return res.status(400).send("Invalid attest data!");
+
+    // Check if userAddress is not provided or empty
+    if (!userAddress || userAddress.trim() === "") {
+      return res.status(400).send("Invalid user address!");
     }
 
-    const blogAttests = await fetchUserBlogAttest(userAddress);
+    const blogAttests = await fetchUserBlogAttest(userAddress.toString());
     if (!blogAttests || blogAttests.length === 0) {
       return res.status(404).send("No attest data found for the user");
     }
