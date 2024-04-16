@@ -13,6 +13,9 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.get("/", async (req, res) => {
+  res.status(200).send("Working on 7001 PORT!");
+});
 app.get("/fetch-blog-attests", async (req, res) => {
   try {
     const blogAttests = await fetchBlogAttest();
