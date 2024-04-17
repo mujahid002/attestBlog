@@ -347,9 +347,8 @@ export default function Home() {
           <table className="table-auto">
             <thead>
               <tr>
-                <th className="px-4 py-2 bg-gray-200 text-black">
-                  All Attested Blogs
-                </th>
+                <th className="px-4 py-2 bg-gray-200 text-black">S.NO</th>
+                <th className="px-4 py-2 bg-gray-200 text-black">Owner</th>
                 {/* <th className="px-4 py-2 bg-gray-200 text-black">
                   Attested Blogs for {address.slice(0, 4)}...
                   {address.slice(-4)}
@@ -366,6 +365,9 @@ export default function Home() {
                   <tr key={index}>
                     <td className="border px-4 py-2 text-center">
                       {index + 1}
+                    </td>
+                    <td className="border px-4 py-2 text-center">
+                      {data.attestData.owner}
                     </td>
                     <td className="border px-4 py-2">
                       {data.attestData ? (
