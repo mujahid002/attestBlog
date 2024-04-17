@@ -242,7 +242,7 @@ export default function Home() {
         alert("Please fill in all fields");
         return;
       }
-      alert(`The data is:  ${blogTitle}`);
+      alert(`Uploading with data:  ${blogTitle}`);
       const data = {
         Title: blogTitle,
         Category: blogCategory,
@@ -288,9 +288,10 @@ export default function Home() {
   }, [address]);
 
   return (
-    <div className="min-h-screen flex justify-center items-center bg-gray-100">
+    <div className="text-black min-h-screen flex justify-center items-center bg-gray-100">
       <div className="container mx-auto px-4">
         <div className="flex flex-col items-center">
+          <h1 className="pb-5 font-bold text-large">BLOG-ATTEST</h1>
           {address.length === 0 ? (
             <button
               id="connectWalletButton"
