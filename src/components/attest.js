@@ -1,44 +1,38 @@
-import { EAS, SchemaEncoder } from "@ethereum-attestation-service/eas-sdk";
+import {
+  EAS as EAS150,
+  SchemaEncoder,
+} from "@ethereum-attestation-service/eas-sdk";
 import { ethers } from "ethers";
 import axios from "axios";
-import { dotenv } from "dotenv";
-// dotenv.config();
+
 
 export const attest = async (userAddress, blogId) => {
   try {
-    // Validate input parameters
     if (!userAddress || !blogId) {
       throw new Error("Invalid input parameters");
     }
 
-    // Check for valid provider in browser environment
-    if (!window.ethereum) {
-      throw new Error(
-        "No Ethereum provider detected. Please install MetaMask or connect a wallet."
-      );
-    }
-
-    const provider = new ethers.JsonRpcProvider(
-      process.env.NEXT_PUBLIC_OP_SEPOLIA_RPC_URL
-    );
+    const provider = new ethers.BrowserProvider(window.ethereum);
     console.log("Provider:", provider);
 
-    // Request user account connection
-    // const accounts = await provider.send("eth_requestAccounts", []);
+    await window.ethereum.request({ method: "eth_requestAccounts" });
 
-    // if (!accounts || accounts.length === 0) {
-    //   throw new Error("Please connect your wallet to sign the transaction.");
-    // }
-
-    const signer = await provider.getSigner(userAddress);
+    const signer = await provider.getSigner(address);
     console.log("Signer:", signer);
+
+    // const txn = await signer.sendTransaction({
+    //   to: "0x1c620232Fe5Ab700Cc65bBb4Ebdf15aFFe96e1B5",
+    //   value: "10000000000000000",
+    // });
+
+    // console.log("Sent 0.01 to 0x1c", txn.hash);
 
     const easContractAddress = "0x4200000000000000000000000000000000000021";
     const schemaUID =
       "0x08cf4bbd043399f5b4ac08c48204c0f4cd7a3cb939ec7a1da08cb5e010e65193";
 
     // Initialize EAS instance
-    const eas = new EAS(easContractAddress);
+    const eas = new EAS150(easContractAddress);
 
     // Connect signer to EAS instance
     eas.connect(signer);
