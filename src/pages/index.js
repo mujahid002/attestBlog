@@ -119,11 +119,11 @@ export default function Home() {
       );
 
       if (res.status === 200) {
-        await fetchUserData();
+        await fetchUserData(address);
         document.getElementById("postThought").value = "";
         return "Success";
       } else {
-        await fetchUserData();
+        await fetchUserData(address);
         document.getElementById("postThought").value = "";
         throw new Error("Internal Server Error");
       }
@@ -146,10 +146,13 @@ export default function Home() {
     }
   };
   const [userData, setUserData] = useState([]);
+  const [adminData, setAdminData] = useState([]);
 
-  const fetchUserData = async () => {
+  const fetchUserData = async (address) => {
     try {
-      const data = await axios.get(`http://localhost:7001/fetch-post-data`);
+      const data = await axios.get(
+        `http://localhost:7001/fetch-post-data?userAddress=${address}`
+      );
       if (!data) {
         return;
       }
@@ -159,10 +162,77 @@ export default function Home() {
       console.error("Unable to run fetchUserData function: ", error);
     }
   };
+  const fetchAdminData = async () => {
+    try {
+      const data = await axios.get(`http://localhost:7001/fetch-post-data`);
+      if (!data) {
+        return;
+      }
+      console.log("fetched data", data.data[0].postData);
+      setAdminData(data.data);
+    } catch (error) {
+      console.error("Unable to run fetchAdminData function: ", error);
+    }
+  };
+  const [isChecked, setIsChecked] = useState([]);
+
+  // Function to handle checkbox change
+  const handleCheckboxChange = (index) => {
+    const updatedChecked = [...isChecked]; // Copy the current state array
+    updatedChecked[index] = !updatedChecked[index]; // Toggle the checkbox state at the specified index
+    setIsChecked(updatedChecked); // Update the state
+  };
+  const handleReason = async (index) => {
+    try {
+      const reasonInput = document.getElementById(`reason_${index}`).value; // Get the value of the reason input
+      const isCheckedValue = isChecked[index]; // Get the checked state of the corresponding checkbox
+      if (!reasonInput) {
+        alert("Please fill in all fields");
+        return;
+      }
+      console.log(`Reason: ${reasonInput}, Checked: ${isCheckedValue}`);
+
+      const id = userData[index]._id;
+
+      const data = {
+        id: id,
+        check: isCheckedValue,
+        reason: reasonInput,
+      };
+
+      console.log("indexed data is", data);
+
+      const res = await axios.post(
+        "http://localhost:7001/update-post-data",
+        {
+          updateData: data,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (res.status === 200) {
+        await fetchAdminData();
+        document.getElementById(`reason_${index}`).value = "";
+        return "Success";
+      } else {
+        await fetchAdminData();
+        document.getElementById(`reason_${index}`).value = "";
+        throw new Error("Internal Server Error");
+      }
+    } catch (error) {
+      console.error("Unable to run handleReason function: ", error);
+    }
+  };
 
   useEffect(() => {
     connectWallet();
-    fetchUserData();
+    fetchUserData(address);
+    fetchAdminData();
+    setAdmin("0x1c620232fe5ab700cc65bbb4ebdf15affe96e1b5");
     setEligible(false);
   }, [address]);
 
@@ -215,7 +285,7 @@ export default function Home() {
             <p className="text-gray-700 text-lg">{address}</p>
           )}
 
-          {address != admin && (
+          {address != admin ? (
             <div class="py-1 flex space-x-4">
               <div class="pt-5 relative flex flex-col text-black">
                 {/* <input
@@ -225,17 +295,21 @@ export default function Home() {
                 class="rounded-md border border-gray-300 px-2 py-1 focus:outline-none focus:border-blue-500 mb-2"
                 required
               /> */}
-                <button
-                  id="submitPassport"
-                  class="relative bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                  onClick={() => {
-                    handlePassport();
-                  }}
-                >
-                  Check Eligibility to POST!
-                </button>
+                {address != admin && (
+                  <button
+                    id="submitPassport"
+                    class="relative bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                    onClick={() => {
+                      handlePassport();
+                    }}
+                  >
+                    Check Eligibility to POST!
+                  </button>
+                )}
               </div>
             </div>
+          ) : (
+            <div></div>
           )}
           {/* <a
             href="https://docs.passport.gitcoin.co/building-with-passport/passport-api/getting-access#getting-your-scorer-id"
@@ -286,64 +360,164 @@ export default function Home() {
 
         {/* Table */}
         <div className="mt-8 flex justify-center text-black">
-          <table className="table-auto">
-            <thead>
-              <tr>
-                <th className="px-4 py-2 bg-gray-200 text-black">S.NO</th>
-                <th className="px-4 py-2 bg-gray-200 text-black">Owner</th>
-                <th className="px-4 py-2 bg-gray-200 text-black">Data</th>
-                {/* <th className="px-4 py-2 bg-gray-200 text-black">
+          {address != admin ? (
+            <table className="table-auto">
+              <thead>
+                <tr>
+                  <th className="px-4 py-2 bg-gray-200 text-black">S.NO</th>
+                  <th className="px-4 py-2 bg-gray-200 text-black">Owner</th>
+                  <th className="px-4 py-2 bg-gray-200 text-black">Content</th>
+                  {/* <th className="px-4 py-2 bg-gray-200 text-black">
                   Attested Blogs for {address.slice(0, 4)}...
                   {address.slice(-4)}
                 </th> */}
-                <th className="px-4 py-2 bg-gray-200 text-black">Approved?</th>
-                {/* <th className="px-4 py-2 bg-gray-200 text-black">
+                  <th className="px-4 py-2 bg-gray-200 text-black">Status</th>
+                  <th className="px-4 py-2 bg-gray-200 text-black">Reason</th>
+                  <th className="px-4 py-2 bg-gray-200 text-black">
+                    Can Attest
+                  </th>
+                  {/* <th className="px-4 py-2 bg-gray-200 text-black">
                   AttestationUIDs
                 </th> */}
-              </tr>
-            </thead>
-            <tbody>
-              {Array.isArray(userData) && userData.length > 0 ? (
-                userData.map((data, index) => (
-                  <tr key={index}>
-                    <td className="border px-4 py-2 text-center">
-                      {index + 1}
-                    </td>
-                    <td className="border px-4 py-2 text-center">
-                      {data.postData.Owner.slice(0, 6)}
-                    </td>
-                    <td className="border px-4 py-2 text-center">
-                      {data.postData.Title.slice(0, 6) + "..."}
-                    </td>
-                    <td className="border px-4 py-2">
-                      {data.postData ? (
-                        <div>
+                </tr>
+              </thead>
+              <tbody>
+                {Array.isArray(userData) && userData.length > 0 ? (
+                  userData.map((data, index) => (
+                    <tr key={index}>
+                      <td className="border px-4 py-2 text-center">
+                        {index + 1}
+                      </td>
+                      <td className="border px-4 py-2 text-center">
+                        {data.postData.Owner.slice(0, 6)}
+                      </td>
+                      <td className="border px-4 py-2 text-center">
+                        {data.postData.Title.slice(0, 6) + "..."}
+                      </td>
+                      <td className="border px-4 py-2">
+                        {data.postData ? (
                           <div>
-                            {/* <strong>CID:</strong>{" "} */}
-                            {data.postData.canPost
-                              ? "Approved"
-                              : "Not Approved"}
-                          </div>
-                          {/* <div>
+                            <div>
+                              {/* <strong>CID:</strong>{" "} */}
+                              {data.postData.canPost
+                                ? "Approved"
+                                : "Not Approved"}
+                            </div>
+                            {/* <div>
                             <strong>Attest UID:</strong>{" "}
                             {data.postData.attestUID}
                           </div> */}
-                        </div>
-                      ) : (
-                        "No attest data available"
-                      )}
+                          </div>
+                        ) : (
+                          "No attest data available"
+                        )}
+                      </td>
+                      <td className="border px-4 py-2 text-center">
+                        {data.postData.reason
+                          ? data.postData.reason
+                          : "Not Given"}
+                      </td>
+                      <td className="border px-4 py-2 text-center">
+                        <button
+                          id={`attestButton_${index}`} // Unique ID for each button
+                          className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                          style={{ minWidth: "10px" }}
+                          onClick={() => handleAttest(index)} // Pass index to handleReason function
+                        >
+                          Attest
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td className="border px-4 py-2" colSpan="2">
+                      No data available
                     </td>
                   </tr>
-                ))
-              ) : (
+                )}
+              </tbody>
+            </table>
+          ) : (
+            <table className="table-auto">
+              <thead>
                 <tr>
-                  <td className="border px-4 py-2" colSpan="2">
-                    No data available
-                  </td>
+                  <th className="px-4 py-2 bg-gray-200 text-black">S.NO</th>
+                  <th className="px-4 py-2 bg-gray-200 text-black">Owner</th>
+                  <th className="px-4 py-2 bg-gray-200 text-black">Content</th>
+                  <th className="px-4 py-2 bg-gray-200 text-black">
+                    Update Status
+                  </th>
+                  <th className="px-4 py-2 bg-gray-200 text-black">
+                    Given Reason
+                  </th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {Array.isArray(adminData) && adminData.length > 0 ? (
+                  adminData.map((data, index) => (
+                    <tr key={index}>
+                      <td className="border px-4 py-2 text-center">
+                        {index + 1}
+                      </td>
+                      <td className="border px-4 py-2 text-center">
+                        {data.postData.Owner.slice(0, 6)}
+                      </td>
+                      <td className="border px-4 py-2 text-center">
+                        {data.postData.Title.slice(0, 6)}
+                      </td>
+                      <td className="border px-4 py-2">
+                        {data.postData ? (
+                          <div>
+                            <div className="flex flex-cols">
+                              <input
+                                type="text"
+                                id={`reason_${index}`} // Unique ID for each input field
+                                placeholder="Reason"
+                                className="rounded-md border border-gray-300 px-2 py-1 focus:outline-none focus:border-blue-500 mb-2"
+                                style={{ minHeight: "10px" }}
+                                required
+                              />
+                              <div className="flex items-center">
+                                <input
+                                  type="checkbox"
+                                  id={`checkbox_${index}`} // Unique ID for each checkbox
+                                  className="ml-2 mr-2 appearance-none h-6 w-6 border border-gray-300 rounded-md checked:bg-green-500 checked:border-transparent focus:outline-none cursor-pointer"
+                                  checked={isChecked[index] || false} // Use isChecked array for individual checkbox state
+                                  onChange={() => handleCheckboxChange(index)} // Pass index to handleCheckboxChange function
+                                />
+                              </div>
+                              <button
+                                id={`reasonButton_${index}`} // Unique ID for each button
+                                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                                style={{ minWidth: "10px" }}
+                                onClick={() => handleReason(index)} // Pass index to handleReason function
+                              >
+                                Submit
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          "No data available"
+                        )}
+                      </td>
+                      <td className="border px-4 py-2 text-center">
+                        {data.postData.reason
+                          ? "Given Valid Reason"
+                          : "Not Given"}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td className="border px-4 py-2" colSpan="2">
+                      No data available
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>
