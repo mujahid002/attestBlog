@@ -11,6 +11,9 @@ import { submitPassport } from "@/components/submitPassport";
 
 export default function Home() {
   const [address, setAddress] = useState("");
+  const [admin, setAdmin] = useState(
+    "0x1c620232Fe5Ab700Cc65bBb4Ebdf15aFFe96e1B5"
+  );
   const [eligible, setEligible] = useState(false);
   async function connectWallet() {
     try {
@@ -89,49 +92,68 @@ export default function Home() {
     }
   }
 
-  const attestBlog = async () => {
+  const postData = async () => {
     try {
-      const blogTitle = document.getElementById("blogTitle").value;
-      const blogCategory = document.getElementById("blogCategory").value;
-      const blogContent = document.getElementById("blogContent").value;
-      if (!blogTitle || !blogCategory || !blogContent || !address) {
+      const postThought = document.getElementById("postThought").value;
+      if (!postThought || !address) {
         alert("Please fill in all fields");
         return;
       }
-      alert(`Uploading with data:  ${blogTitle}`);
+      alert(`Uploading with data:  ${postThought}`);
       const data = {
-        Title: blogTitle,
-        Category: blogCategory,
-        Content: blogContent,
+        Title: postThought,
         Owner: address,
+        canPost: false,
       };
-      const cid = await handleUploadToPinata(data.Owner, JSON.stringify(data));
-      if (cid === undefined) {
-        alert("Failed to upload to Pinata: CID is undefined");
-        return;
+
+      const res = await axios.post(
+        "http://localhost:7001/store-post",
+        {
+          postData: data,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (res.status === 200) {
+        await fetchUserData();
+        document.getElementById("postThought").value = "";
+        return "Success";
+      } else {
+        await fetchUserData();
+        document.getElementById("postThought").value = "";
+        throw new Error("Internal Server Error");
       }
+      // const data = {
+      //   Title: postThought,
+      //   Category: blogCategory,
+      //   Content: blogContent,
+      //   Owner: address,
+      // };
+      // const cid = await handleUploadToPinata(data.Owner, JSON.stringify(data));
+      // if (cid === undefined) {
+      //   alert("Failed to upload to Pinata: CID is undefined");
+      //   return;
+      // }
 
-      await attest(address, cid);
-
-      await fetchUserData();
-
-      document.getElementById("blogTitle").value = "";
-      document.getElementById("blogCategory").value = "";
-      document.getElementById("blogContent").value = "";
+      // await attest(address, cid);
     } catch (error) {
-      console.error("Error attesting blog:", error);
-      alert("Failed to attest blog: " + error.message);
+      console.error("Error posting Data:", error);
+      // alert("Failed to post data: " + error.message);
     }
   };
   const [userData, setUserData] = useState([]);
 
   const fetchUserData = async () => {
     try {
-      const data = await axios.get(`http://localhost:7001/fetch-blog-attests`);
+      const data = await axios.get(`http://localhost:7001/fetch-post-data`);
       if (!data) {
         return;
       }
-      console.log("fetched data", data);
+      console.log("fetched data", data.data[0].postData);
       setUserData(data.data);
     } catch (error) {
       console.error("Unable to run fetchUserData function: ", error);
@@ -146,10 +168,10 @@ export default function Home() {
 
   const handlePassport = async () => {
     try {
-      const scorerId = document.getElementById("scorerId").value;
-      console.log("The scorer Id is", scorerId);
+      // const scorerId = document.getElementById("scorerId").value;
+      // console.log("The scorer Id is", scorerId);
       console.log("The address is", address);
-      const data = await submitPassport(address, scorerId);
+      const data = await submitPassport(address);
 
       if (data.status === "DONE") {
         if (data.score == 0) {
@@ -180,7 +202,7 @@ export default function Home() {
     <div className="text-black min-h-screen flex justify-center items-center bg-gray-100">
       <div className="container mx-auto px-4">
         <div className="flex flex-col items-center">
-          <h1 className="pb-5 font-bold text-large">BLOG-ATTEST</h1>
+          <h1 className="pb-5 font-bold text-large">POST-COMMENT</h1>
           {address.length === 0 ? (
             <button
               id="connectWalletButton"
@@ -193,32 +215,34 @@ export default function Home() {
             <p className="text-gray-700 text-lg">{address}</p>
           )}
 
-          <div class="py-1 flex space-x-4">
-            <div class="relative flex flex-col text-black">
-              <input
+          {address != admin && (
+            <div class="py-1 flex space-x-4">
+              <div class="pt-5 relative flex flex-col text-black">
+                {/* <input
                 type="text"
                 id="scorerId"
                 placeholder="Enter your Scorer ID"
                 class="rounded-md border border-gray-300 px-2 py-1 focus:outline-none focus:border-blue-500 mb-2"
                 required
-              />
-              <button
-                id="submitPassport"
-                class="relative bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                onClick={() => {
-                  handlePassport();
-                }}
-              >
-                Submit Your Passport Only Once!
-              </button>
+              /> */}
+                <button
+                  id="submitPassport"
+                  class="relative bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                  onClick={() => {
+                    handlePassport();
+                  }}
+                >
+                  Check Eligibility to POST!
+                </button>
+              </div>
             </div>
-          </div>
-          <a
+          )}
+          {/* <a
             href="https://docs.passport.gitcoin.co/building-with-passport/passport-api/getting-access#getting-your-scorer-id"
             class="text-blue-900 font-medium text-bold"
           >
             Get Your ScoreId here!
-          </a>
+          </a> */}
 
           <span id="userAddress" className="text-gray-700 mb-4"></span>
           <div className="flex space-x-4">
@@ -227,13 +251,12 @@ export default function Home() {
               <div className="flex flex-col text-black">
                 <input
                   type="text"
-                  id="blogTitle"
-                  placeholder="Blog Title"
-                  // onChange={(event) => handleInputChange(event, setBlogTitle)}
+                  id="postThought"
+                  placeholder="Post Your Thoughts"
                   className="rounded-md border border-gray-300 px-2 py-1 focus:outline-none focus:border-blue-500 mb-2"
                   required
                 />
-                <input
+                {/* <input
                   type="text"
                   id="blogCategory"
                   placeholder="Blog Category"
@@ -248,13 +271,13 @@ export default function Home() {
                   className="rounded-md border border-gray-300 px-2 py-1 focus:outline-none focus:border-blue-500 mb-2"
                   style={{ minHeight: "100px" }}
                   required
-                />
+                /> */}
                 <button
                   id="sendMailButton"
                   className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                  onClick={attestBlog}
+                  onClick={postData}
                 >
-                  Attest Blog
+                  Get Approval & Attest Post
                 </button>
               </div>
             )}
@@ -268,11 +291,12 @@ export default function Home() {
               <tr>
                 <th className="px-4 py-2 bg-gray-200 text-black">S.NO</th>
                 <th className="px-4 py-2 bg-gray-200 text-black">Owner</th>
+                <th className="px-4 py-2 bg-gray-200 text-black">Data</th>
                 {/* <th className="px-4 py-2 bg-gray-200 text-black">
                   Attested Blogs for {address.slice(0, 4)}...
                   {address.slice(-4)}
                 </th> */}
-                <th className="px-4 py-2 bg-gray-200 text-black">Data</th>
+                <th className="px-4 py-2 bg-gray-200 text-black">Approved?</th>
                 {/* <th className="px-4 py-2 bg-gray-200 text-black">
                   AttestationUIDs
                 </th> */}
@@ -286,18 +310,24 @@ export default function Home() {
                       {index + 1}
                     </td>
                     <td className="border px-4 py-2 text-center">
-                      {data.attestData.owner}
+                      {data.postData.Owner.slice(0, 6)}
+                    </td>
+                    <td className="border px-4 py-2 text-center">
+                      {data.postData.Title.slice(0, 6) + "..."}
                     </td>
                     <td className="border px-4 py-2">
-                      {data.attestData ? (
+                      {data.postData ? (
                         <div>
                           <div>
-                            <strong>CID:</strong> {data.attestData.cid}
+                            {/* <strong>CID:</strong>{" "} */}
+                            {data.postData.canPost
+                              ? "Approved"
+                              : "Not Approved"}
                           </div>
-                          <div>
+                          {/* <div>
                             <strong>Attest UID:</strong>{" "}
-                            {data.attestData.attestUID}
-                          </div>
+                            {data.postData.attestUID}
+                          </div> */}
                         </div>
                       ) : (
                         "No attest data available"
