@@ -3,15 +3,22 @@ const connectMongo = require("./connect-mongo");
 const storeBlogAttest = async (attestData) => {
   const client = await connectMongo();
   const db = client.db("attest");
-  const collection = db.collection("blog");
+  const collection = db.collection("post");
   await collection.insertOne({ attestData });
+  await client.close();
+};
+const storePost = async (postData) => {
+  const client = await connectMongo();
+  const db = client.db("attest");
+  const collection = db.collection("admin");
+  await collection.insertOne({ postData });
   await client.close();
 };
 
 const fetchBlogAttest = async () => {
   const client = await connectMongo();
   const db = client.db("attest");
-  const collection = db.collection("blog");
+  const collection = db.collection("post");
 
   const blogAttests = await collection.find({}).toArray();
 
@@ -21,10 +28,23 @@ const fetchBlogAttest = async () => {
 
   return blogAttests;
 };
+const fetchPostData = async () => {
+  const client = await connectMongo();
+  const db = client.db("attest");
+  const collection = db.collection("admin");
+
+  const postData = await collection.find({}).toArray();
+
+  console.log(postData);
+
+  await client.close();
+
+  return postData;
+};
 const fetchUserBlogAttest = async (userAddress) => {
   const client = await connectMongo();
   const db = client.db("attest");
-  const collection = db.collection("blog");
+  const collection = db.collection("post");
 
   try {
     // Filter documents where "attestData.owner" matches the userAddress
@@ -49,4 +69,10 @@ const fetchUserBlogAttest = async (userAddress) => {
   }
 };
 
-module.exports = { storeBlogAttest, fetchBlogAttest, fetchUserBlogAttest };
+module.exports = {
+  storeBlogAttest,
+  storePost,
+  fetchPostData,
+  fetchBlogAttest,
+  fetchUserBlogAttest,
+};
