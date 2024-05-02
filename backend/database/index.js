@@ -14,6 +14,32 @@ const storePost = async (postData) => {
   await collection.insertOne({ postData });
   await client.close();
 };
+const updatePostData = async (id, updateData) => {
+  try {
+    const client = await connectMongo();
+    const db = client.db("attest");
+    const collection = db.collection("admin");
+
+    // Update the document with the provided id
+    await collection.updateOne(
+      { _id: id },
+      {
+        $set: {
+          "postData.canPost": updateData.check,
+        },
+        $addToSet: {
+          "postData.reason": updateData.reason,
+        },
+      }
+    );
+
+    await client.close();
+  } catch (error) {
+    console.error("Error updating post data:", error);
+    // You might want to handle errors differently based on your requirements
+    throw error; // Re-throw the error to propagate it upwards
+  }
+};
 
 const fetchBlogAttest = async () => {
   const client = await connectMongo();
@@ -28,6 +54,22 @@ const fetchBlogAttest = async () => {
 
   return blogAttests;
 };
+const fetchUserPostData = async (address) => {
+  const client = await connectMongo();
+  const db = client.db("attest");
+  const collection = db.collection("admin");
+
+  const postData = await collection
+    .find({ "postData.Owner": address })
+    .toArray();
+
+  console.log(postData);
+
+  // await client.close();
+
+  return postData;
+};
+
 const fetchPostData = async () => {
   const client = await connectMongo();
   const db = client.db("attest");
@@ -37,7 +79,7 @@ const fetchPostData = async () => {
 
   console.log(postData);
 
-  await client.close();
+  // await client.close();
 
   return postData;
 };
@@ -60,7 +102,7 @@ const fetchUserBlogAttest = async (userAddress) => {
     console.log(userAddress);
     console.log(blogAttests);
 
-    await client.close();
+    // await client.close();
 
     return blogAttests;
   } catch (error) {
@@ -72,6 +114,8 @@ const fetchUserBlogAttest = async (userAddress) => {
 module.exports = {
   storeBlogAttest,
   storePost,
+  fetchUserPostData,
+  updatePostData,
   fetchPostData,
   fetchBlogAttest,
   fetchUserBlogAttest,
