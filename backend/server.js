@@ -1,11 +1,15 @@
 const express = require("express");
 const connectMongo = require("./database/connect-mongo");
+const { ObjectId } = require("mongodb");
+
 const cors = require("cors");
 
 const app = express();
 const {
   storeBlogAttest,
   storePost,
+  updatePostData,
+  fetchUserPostData,
   fetchPostData,
   fetchBlogAttest,
   fetchUserBlogAttest,
@@ -76,10 +80,42 @@ app.post("/store-post", async (req, res) => {
     return res.status(500).send("Internal server error");
   }
 });
+app.post("/update-post-data", async (req, res) => {
+  try {
+    const { updateData } = req.body;
+
+    const _id=updateData.id;
+
+    if (_id && typeof _id === "string" && ObjectId.isValid(_id)) {
+      const objectId = new ObjectId(_id);
+      await updatePostData(objectId,updateData);
+      return res.status(200).send("Post data stored successfully!");
+    } else {
+      // If _id is missing or invalid, return a 400 Bad Request response
+      return res.status(400).send("Invalid _id provided");
+    }
+  } catch (error) {
+    console.error("Error storing post data:", error);
+    return res.status(500).send("Internal server error");
+  }
+});
 
 app.get("/fetch-post-data", async (req, res) => {
   try {
     const postData = await fetchPostData();
+    if (!postData) {
+      return res.status(404).send("No attest data found");
+    }
+    return res.status(200).json(postData);
+  } catch (error) {
+    console.error("Error fetching blog attests:", error);
+    return res.status(500).send("Internal server error");
+  }
+});
+app.get("/fetch-post-data/:userAddress", async (req, res) => {
+  try {
+    const { userAddress } = req.query;
+    const postData = await fetchUserPostData(userAddress);
     if (!postData) {
       return res.status(404).send("No attest data found");
     }
