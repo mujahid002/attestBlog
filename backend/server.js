@@ -5,6 +5,8 @@ const cors = require("cors");
 const app = express();
 const {
   storeBlogAttest,
+  storePost,
+  fetchPostData,
   fetchBlogAttest,
   fetchUserBlogAttest,
 } = require("./database/index");
@@ -58,6 +60,32 @@ app.post("/store-attest", async (req, res) => {
     return res.status(200).send("Attested data stored successfully!");
   } catch (error) {
     console.error("Error storing attest data:", error);
+    return res.status(500).send("Internal server error");
+  }
+});
+app.post("/store-post", async (req, res) => {
+  try {
+    const { postData } = req.body;
+    if (!postData) {
+      return res.status(400).send("Invalid post data!");
+    }
+    await storePost(postData);
+    return res.status(200).send("Post data stored successfully!");
+  } catch (error) {
+    console.error("Error storing post data:", error);
+    return res.status(500).send("Internal server error");
+  }
+});
+
+app.get("/fetch-post-data", async (req, res) => {
+  try {
+    const postData = await fetchPostData();
+    if (!postData) {
+      return res.status(404).send("No attest data found");
+    }
+    return res.status(200).json(postData);
+  } catch (error) {
+    console.error("Error fetching blog attests:", error);
     return res.status(500).send("Internal server error");
   }
 });
