@@ -1,21 +1,20 @@
 import axios from "axios";
 
-export const submitPassport = async (address, scorerId) => {
-  const submitPassportConfig = {
-    headers: {
-      "X-API-KEY": process.env.NEXT_PUBLIC_SCORER_API_KEY,
-      Accept: "application/json",
-      "Content-Type": "application/json",
-    },
-  };
-
-  // This is the body that will be sent to the Passport API for scoring
-  const submitPassportData = {
-    address: address,
-    scorer_id: scorerId,
-  };
-
+export const submitPassport = async (address) => {
   try {
+    const submitPassportConfig = {
+      headers: {
+        "X-API-KEY": process.env.NEXT_PUBLIC_SCORER_API_KEY,
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+    };
+
+    // This is the body that will be sent to the Passport API for scoring
+    const submitPassportData = {
+      address: address,
+      scorer_id: `${process.env.NEXT_PUBLIC_SCORER_ID}`,
+    };
     const { data } = await axios.post(
       "https://api.scorer.gitcoin.co/registry/submit-passport",
       submitPassportData,
