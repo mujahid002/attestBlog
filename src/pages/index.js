@@ -5,7 +5,7 @@ import { ethers } from "ethers";
 import axios from "axios";
 
 // import { connectWallet } from "@/components/connectWallet";
-import { attest } from "@/components/attest";
+import { attestOnChain, attestOffChain } from "@/components/attest";
 import { handleUploadToPinata } from "@/components/pinata";
 import { submitPassport } from "@/components/submitPassport";
 
@@ -147,6 +147,7 @@ export default function Home() {
   };
   const [userData, setUserData] = useState([]);
   const [adminData, setAdminData] = useState([]);
+  const [attestedData, setAttestedData] = useState([]);
 
   const fetchUserData = async (address) => {
     try {
@@ -174,6 +175,29 @@ export default function Home() {
       console.error("Unable to run fetchAdminData function: ", error);
     }
   };
+  const fetchAttestedData = async () => {
+    try {
+      const response = await axios.get("http://localhost:7001/fetch-attests");
+
+      if (!response.data || !Array.isArray(response.data)) {
+        console.log("No data received or invalid data format");
+        return;
+      }
+
+      const fetchedData = response.data;
+      console.log("Fetched attested data:", fetchedData);
+      // Assuming setAttestedData is a function to set state in React
+      setAttestedData(fetchedData);
+
+      // If you need to process each JSON object individually, you can iterate over the array
+      fetchedData.forEach((jsonObject, index) => {
+        console.log(`JSON object ${index + 1}:`, jsonObject);
+      });
+    } catch (error) {
+      console.error("Unable to fetch attested data:", error);
+    }
+  };
+
   const [isChecked, setIsChecked] = useState([]);
 
   // Function to handle checkbox change
@@ -228,10 +252,22 @@ export default function Home() {
     }
   };
 
+  const handleAttest = async (index) => {
+    try {
+      const data = userData[index].postData;
+      console.log("attesting data is", data);
+      await attestOnChain(data);
+      // await attestOffChain(data);
+    } catch (error) {
+      console.error("Unable to run handleAttest", error);
+    }
+  };
+
   useEffect(() => {
     connectWallet();
     fetchUserData(address);
     fetchAdminData();
+    fetchAttestedData();
     setAdmin("0x1c620232fe5ab700cc65bbb4ebdf15affe96e1b5");
     setEligible(false);
   }, [address]);
@@ -418,14 +454,18 @@ export default function Home() {
                           : "Not Given"}
                       </td>
                       <td className="border px-4 py-2 text-center">
-                        <button
-                          id={`attestButton_${index}`} // Unique ID for each button
-                          className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                          style={{ minWidth: "10px" }}
-                          onClick={() => handleAttest(index)} // Pass index to handleReason function
-                        >
-                          Attest
-                        </button>
+                        {data.postData.canPost ? (
+                          <button
+                            id={`attestButton_${index}`} // Unique ID for each button
+                            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                            style={{ minWidth: "10px" }}
+                            onClick={() => handleAttest(index)} // Pass index to handleReason function
+                          >
+                            Attest
+                          </button>
+                        ) : (
+                          <p>Nope</p>
+                        )}
                       </td>
                     </tr>
                   ))
@@ -518,6 +558,84 @@ export default function Home() {
               </tbody>
             </table>
           )}
+        </div>
+        <div className="mt-8 flex justify-center text-black">
+          {/* <h2>All Attested Data</h2> */}
+          <table className="table-auto">
+            <thead>
+              <tr>
+                <th className="px-4 py-2 bg-gray-200 text-black">S.NO</th>
+                <th className="px-4 py-2 bg-gray-200 text-black">Owner</th>
+                <th className="px-4 py-2 bg-gray-200 text-black">Content</th>
+                {/* <th className="px-4 py-2 bg-gray-200 text-black">
+                  Attested Blogs for {address.slice(0, 4)}...
+                  {address.slice(-4)}
+                </th> */}
+                {/* <th className="px-4 py-2 bg-gray-200 text-black">Status</th> */}
+                <th className="px-4 py-2 bg-gray-200 text-black">
+                  Comment Attest
+                </th>
+                {/* <th className="px-4 py-2 bg-gray-200 text-black">
+                  AttestationUIDs
+                </th> */}
+              </tr>
+            </thead>
+            <tbody>
+              {Array.isArray(attestedData) && attestedData.length > 0 ? (
+                attestedData.map((data, index) => (
+                  <tr key={index}>
+                    <td className="border px-4 py-2 text-center">
+                      {index + 1}
+                    </td>
+                    <td className="border px-4 py-2 text-center">
+                      {data.attestData &&
+                      data.attestData.postData &&
+                      data.attestData.postData.Owner
+                        ? data.attestData.postData.Owner.slice(0, 6)
+                        : "Owner not available"}
+                    </td>
+                    <td className="border px-4 py-2 text-center">
+                      {data.attestData &&
+                      data.attestData.postData &&
+                      data.attestData.postData.Title
+                        ? data.attestData.postData.Title.slice(0, 6) + "..."
+                        : "Title not available"}
+                    </td>
+                    <td className="border px-4 py-2">
+                      {data.attestData && data.attestData.postData ? (
+                        <div className="flex flex-cols">
+                          <input
+                            type="text"
+                            id={`comment_${index}`}
+                            placeholder="Comment..."
+                            className="rounded-md border border-gray-300 px-2 py-1 focus:outline-none focus:border-blue-500 mb-2"
+                            style={{ minHeight: "10px" }}
+                            required
+                          />
+                          <button
+                            id={`commentButton_${index}`}
+                            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                            style={{ minWidth: "10px" }}
+                            onClick={() => handleComment(index)}
+                          >
+                            Comment
+                          </button>
+                        </div>
+                      ) : (
+                        "No data available"
+                      )}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td className="border px-4 py-2" colSpan="4">
+                    No data available
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
