@@ -1,3 +1,11 @@
+## Updated Schema
+
+https://optimism-sepolia.easscan.org/schema/view/0x4a56b373bd7d6804deb561b60eed5b6a981fac23b45fa800f38d53e91bb9f121
+
+## Resolver Contract
+
+https://sepolia-optimistic.etherscan.io/address/0xFF79C42512003C04aA2Dc736be9F22eb60590c1f#code
+
 ## Created Schema for Blog, it contains Creator Address and CID from Pinata
 
 Proof: https://optimism-sepolia.blockscout.com/tx/0x6e8355649d8fabcc6a2ab43b56be57f31e74504a3a817bfe1ab2a31957666d28
