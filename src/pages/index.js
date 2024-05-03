@@ -8,6 +8,7 @@ import axios from "axios";
 import { attestOnChain, attestOffChain } from "@/components/attest";
 import { handleUploadToPinata } from "@/components/pinata";
 import { submitPassport } from "@/components/submitPassport";
+import { comment } from "@/components/comment";
 
 export default function Home() {
   const [address, setAddress] = useState("");
@@ -165,7 +166,7 @@ export default function Home() {
   };
   const fetchAdminData = async () => {
     try {
-      const data = await axios.get(`http://localhost:7001/fetch-post-data`);
+      const data = await axios.get(`http://localhost:7001/fetch-posts`);
       if (!data) {
         return;
       }
@@ -258,6 +259,26 @@ export default function Home() {
       console.log("attesting data is", data);
       await attestOnChain(data);
       // await attestOffChain(data);
+    } catch (error) {
+      console.error("Unable to run handleAttest", error);
+    }
+  };
+  const handleComment = async (index) => {
+    try {
+      const commentInput = document.getElementById(`comment_${index}`).value;
+      if (!commentInput) {
+        alert("Please fill in comment field");
+        return;
+      }
+      const data = {
+        commenter: address,
+        comment: commentInput,
+        attestedData: attestedData[index],
+      };
+      console.log("attesting data is", data);
+      await comment(data);
+
+      document.getElementById(`comment_${index}`).value = "";
     } catch (error) {
       console.error("Unable to run handleAttest", error);
     }

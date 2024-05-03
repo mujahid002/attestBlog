@@ -132,8 +132,6 @@ export const attestOffChain = async (data) => {
         // expirationTime: 0,
         revocable: true, // Be aware that if your schema is not revocable, this MUST be false
         schema: schemaUID,
-        // refUID:
-        //   "0x0000000000000000000000000000000000000000000000000000000000000000",
         data: encodedData,
       },
       signer
