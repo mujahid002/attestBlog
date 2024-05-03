@@ -1,17 +1,18 @@
 const express = require("express");
 const connectMongo = require("./database/connect-mongo");
 const { ObjectId } = require("mongodb");
+const { resolverContract } = require("./constants/index");
 
 const cors = require("cors");
 
 const app = express();
 const {
-  storeBlogAttest,
+  storeUserAttest,
   storePost,
   updatePostData,
   fetchUserPostData,
   fetchPostData,
-  fetchBlogAttest,
+  fetchAttestData,
   fetchUserBlogAttest,
 } = require("./database/index");
 app.use(cors());
@@ -22,9 +23,9 @@ app.use(express.urlencoded({ extended: true }));
 app.get("/", async (req, res) => {
   res.status(200).send("Working on 7001 PORT!");
 });
-app.get("/fetch-blog-attests", async (req, res) => {
+app.get("/fetch-attests", async (req, res) => {
   try {
-    const blogAttests = await fetchBlogAttest();
+    const blogAttests = await fetchAttestData();
     if (!blogAttests) {
       return res.status(404).send("No attest data found");
     }
@@ -56,11 +57,11 @@ app.get("/fetch-user-attests/:userAddress", async (req, res) => {
 
 app.post("/store-attest", async (req, res) => {
   try {
-    const { attestData } = req.body;
-    if (!attestData) {
+    const { attestedData } = req.body;
+    if (!attestedData) {
       return res.status(400).send("Invalid attest data!");
     }
-    await storeBlogAttest(attestData);
+    await storeUserAttest(attestedData);
     return res.status(200).send("Attested data stored successfully!");
   } catch (error) {
     console.error("Error storing attest data:", error);
@@ -84,11 +85,17 @@ app.post("/update-post-data", async (req, res) => {
   try {
     const { updateData } = req.body;
 
-    const _id=updateData.id;
+    const _id = updateData.id;
 
     if (_id && typeof _id === "string" && ObjectId.isValid(_id)) {
       const objectId = new ObjectId(_id);
-      await updatePostData(objectId,updateData);
+      await updatePostData(objectId, updateData);
+      if (updateData.check === true) {
+        const giveAccess = await resolverContract.updateAccessForAttester(
+          updateData.Owner,
+          true
+        );
+      }
       return res.status(200).send("Post data stored successfully!");
     } else {
       // If _id is missing or invalid, return a 400 Bad Request response
