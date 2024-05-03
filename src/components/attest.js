@@ -5,11 +5,13 @@ import {
 import { ethers } from "ethers";
 import axios from "axios";
 
-
-export const attest = async (userAddress, blogId) => {
+export const attestOnChain = async (data) => {
   try {
-    if (!userAddress || !blogId) {
+    if (!data) {
       throw new Error("Invalid input parameters");
+    }
+    if (!data.canPost) {
+      throw new Error("User Cannot Attest with this Data");
     }
 
     const provider = new ethers.BrowserProvider(window.ethereum);
@@ -17,19 +19,12 @@ export const attest = async (userAddress, blogId) => {
 
     await window.ethereum.request({ method: "eth_requestAccounts" });
 
-    const signer = await provider.getSigner(address);
+    const signer = await provider.getSigner(data.Owner);
     console.log("Signer:", signer);
-
-    // const txn = await signer.sendTransaction({
-    //   to: "0x1c620232Fe5Ab700Cc65bBb4Ebdf15aFFe96e1B5",
-    //   value: "10000000000000000",
-    // });
-
-    // console.log("Sent 0.01 to 0x1c", txn.hash);
 
     const easContractAddress = "0x4200000000000000000000000000000000000021";
     const schemaUID =
-      "0x08cf4bbd043399f5b4ac08c48204c0f4cd7a3cb939ec7a1da08cb5e010e65193";
+      "0x4a56b373bd7d6804deb561b60eed5b6a981fac23b45fa800f38d53e91bb9f121";
 
     // Initialize EAS instance
     const eas = new EAS150(easContractAddress);
@@ -39,18 +34,19 @@ export const attest = async (userAddress, blogId) => {
 
     // Initialize SchemaEncoder with the schema string
     const schemaEncoder = new SchemaEncoder(
-      "address Creator, string ContentID"
+      "string Title, address Owner, bool canPost"
     );
     const encodedData = schemaEncoder.encodeData([
-      { name: "Creator", value: userAddress, type: "address" },
-      { name: "ContentID", value: blogId, type: "string" },
+      { name: "Title", value: data.Title, type: "string" },
+      { name: "Owner", value: data.Owner, type: "address" },
+      { name: "canPost", value: data.canPost, type: "bool" },
     ]);
 
     // Attest the data
     const tx = await eas.attest({
-      schema: schemaUID, // Replace with your schema identifier
+      schema: schemaUID,
       data: {
-        recipient: userAddress,
+        recipient: data.Owner,
         // expirationTime: 0,
         revocable: true,
         data: encodedData,
@@ -62,16 +58,15 @@ export const attest = async (userAddress, blogId) => {
     console.log("New attestation UID:", newAttestationUID);
 
     // Store the attestation data (assuming axios exists)
-    const data = {
-      owner: userAddress,
-      cid: blogId,
+    const attestedData = {
+      postData: data,
       attestUID: newAttestationUID,
     };
 
     const res = await axios.post(
-      "http://localhost:7001/store-attest", // Replace with your backend URL
+      "http://localhost:7001/store-attest",
       {
-        attestData: data,
+        attestedData: attestedData,
       },
       {
         headers: {
@@ -86,7 +81,93 @@ export const attest = async (userAddress, blogId) => {
       throw new Error("Internal Server Error");
     }
   } catch (error) {
-    console.error("Unable to run Attest: ", error);
+    console.error("Unable to run OnChain Attest: ", error);
+    throw error; // Rethrow the error for handling in the calling function
+  }
+};
+export const attestOffChain = async (data) => {
+  try {
+    if (!data) {
+      throw new Error("Invalid input parameters");
+    }
+    if (!data.canPost) {
+      throw new Error("User Cannot Attest with this Data");
+    }
+
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    console.log("Provider:", provider);
+
+    await window.ethereum.request({ method: "eth_requestAccounts" });
+
+    const signer = await provider.getSigner(data.Owner);
+    console.log("Signer:", signer);
+
+    const easContractAddress = "0x4200000000000000000000000000000000000021";
+    const schemaUID =
+      "0x4a56b373bd7d6804deb561b60eed5b6a981fac23b45fa800f38d53e91bb9f121";
+
+    // Initialize EAS instance
+    const eas = new EAS150(easContractAddress);
+
+    const offchain = await eas.getOffchain();
+
+    // Connect signer to EAS instance
+    eas.connect(signer);
+
+    // Initialize SchemaEncoder with the schema string
+    const schemaEncoder = new SchemaEncoder(
+      "string Title, address Owner, bool canPost"
+    );
+    const encodedData = schemaEncoder.encodeData([
+      { name: "Title", value: data.Title, type: "string" },
+      { name: "Owner", value: data.Owner, type: "address" },
+      { name: "canPost", value: data.canPost, type: "bool" },
+    ]);
+
+    // Attest the data
+    const tx = await offchain.signOffchainAttestation(
+      {
+        recipient: data.Owner,
+        // Unix timestamp of when attestation expires. (0 for no expiration)
+        // expirationTime: 0,
+        revocable: true, // Be aware that if your schema is not revocable, this MUST be false
+        schema: schemaUID,
+        // refUID:
+        //   "0x0000000000000000000000000000000000000000000000000000000000000000",
+        data: encodedData,
+      },
+      signer
+    );
+
+    const newAttestationUID = await tx.wait();
+
+    console.log("New attestation UID:", newAttestationUID);
+
+    // Store the attestation data (assuming axios exists)
+    const attestedData = {
+      postData: data,
+      attestUID: newAttestationUID,
+    };
+
+    const res = await axios.post(
+      "http://localhost:7001/store-attest",
+      {
+        attestedData: attestedData,
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    if (res.status === 200) {
+      return "Success"; // Indicate success
+    } else {
+      throw new Error("Internal Server Error");
+    }
+  } catch (error) {
+    console.error("Unable to run Offchain Attest: ", error);
     throw error; // Rethrow the error for handling in the calling function
   }
 };
