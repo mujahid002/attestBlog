@@ -7,6 +7,13 @@ const storeUserAttest = async (attestData) => {
   await collection.insertOne({ attestData });
   await client.close();
 };
+const storeUserComment = async (attestedComment) => {
+  const client = await connectMongo();
+  const db = client.db("attest");
+  const collection = db.collection("comment");
+  await collection.insertOne({ attestedComment });
+  await client.close();
+};
 const storePost = async (postData) => {
   const client = await connectMongo();
   const db = client.db("attest");
@@ -111,6 +118,7 @@ const fetchUserBlogAttest = async (userAddress) => {
 
 module.exports = {
   storeUserAttest,
+  storeUserComment,
   storePost,
   fetchUserPostData,
   updatePostData,
