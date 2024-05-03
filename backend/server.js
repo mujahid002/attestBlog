@@ -11,6 +11,7 @@ const {
   storePost,
   updatePostData,
   fetchUserPostData,
+  storeUserComment,
   fetchPostData,
   fetchAttestData,
   fetchUserBlogAttest,
@@ -68,6 +69,19 @@ app.post("/store-attest", async (req, res) => {
     return res.status(500).send("Internal server error");
   }
 });
+app.post("/store-comment", async (req, res) => {
+  try {
+    const { attestedComment } = req.body;
+    if (!attestedComment) {
+      return res.status(400).send("Invalid attest data!");
+    }
+    await storeUserComment(attestedComment);
+    return res.status(200).send("Attested data stored successfully!");
+  } catch (error) {
+    console.error("Error storing attest data:", error);
+    return res.status(500).send("Internal server error");
+  }
+});
 app.post("/store-post", async (req, res) => {
   try {
     const { postData } = req.body;
@@ -107,7 +121,7 @@ app.post("/update-post-data", async (req, res) => {
   }
 });
 
-app.get("/fetch-post-data", async (req, res) => {
+app.get("/fetch-posts", async (req, res) => {
   try {
     const postData = await fetchPostData();
     if (!postData) {
@@ -119,7 +133,7 @@ app.get("/fetch-post-data", async (req, res) => {
     return res.status(500).send("Internal server error");
   }
 });
-app.get("/fetch-post-data/:userAddress", async (req, res) => {
+app.get(`/fetch-post-data`, async (req, res) => {
   try {
     const { userAddress } = req.query;
     const postData = await fetchUserPostData(userAddress);
