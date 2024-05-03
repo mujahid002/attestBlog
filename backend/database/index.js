@@ -1,9 +1,9 @@
 const connectMongo = require("./connect-mongo");
 
-const storeBlogAttest = async (attestData) => {
+const storeUserAttest = async (attestData) => {
   const client = await connectMongo();
   const db = client.db("attest");
-  const collection = db.collection("post");
+  const collection = db.collection("attest");
   await collection.insertOne({ attestData });
   await client.close();
 };
@@ -41,16 +41,14 @@ const updatePostData = async (id, updateData) => {
   }
 };
 
-const fetchBlogAttest = async () => {
+const fetchAttestData = async () => {
   const client = await connectMongo();
   const db = client.db("attest");
-  const collection = db.collection("post");
+  const collection = db.collection("attest");
 
   const blogAttests = await collection.find({}).toArray();
 
   console.log(blogAttests);
-
-  await client.close();
 
   return blogAttests;
 };
@@ -112,11 +110,11 @@ const fetchUserBlogAttest = async (userAddress) => {
 };
 
 module.exports = {
-  storeBlogAttest,
+  storeUserAttest,
   storePost,
   fetchUserPostData,
   updatePostData,
   fetchPostData,
-  fetchBlogAttest,
+  fetchAttestData,
   fetchUserBlogAttest,
 };
