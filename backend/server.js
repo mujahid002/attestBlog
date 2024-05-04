@@ -2,7 +2,7 @@ const express = require("express");
 const connectMongo = require("./database/connect-mongo");
 const { ObjectId } = require("mongodb");
 const { resolverContract } = require("./constants/index");
-
+const ethers = require("ethers");
 const cors = require("cors");
 
 const app = express();
@@ -101,14 +101,13 @@ app.post("/update-post-data", async (req, res) => {
 
     const _id = updateData.id;
 
+    console.log("THE _ID IS", _id);
+
     if (_id && typeof _id === "string" && ObjectId.isValid(_id)) {
       const objectId = new ObjectId(_id);
       await updatePostData(objectId, updateData);
       if (updateData.check === true) {
-        const giveAccess = await resolverContract.updateAccessForAttester(
-          updateData.Owner,
-          true
-        );
+        await resolverContract.updateAccessForAttester(updateData.Owner, true);
       }
       return res.status(200).send("Post data stored successfully!");
     } else {
@@ -116,7 +115,7 @@ app.post("/update-post-data", async (req, res) => {
       return res.status(400).send("Invalid _id provided");
     }
   } catch (error) {
-    console.error("Error storing post data:", error);
+    console.error("Error updating post data:", error);
     return res.status(500).send("Internal server error");
   }
 });
