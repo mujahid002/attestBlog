@@ -219,10 +219,13 @@ export default function Home() {
 
       const id = userData[index]._id;
 
+      console.log("THE USER DATA IS", userData[index].postData);
+
       const data = {
         id: id,
         check: isCheckedValue,
         reason: reasonInput,
+        Owner: userData[index].postData.Owner,
       };
 
       console.log("indexed data is", data);
@@ -306,6 +309,7 @@ export default function Home() {
             `Follow this link https://passport.gitcoin.co/#/ to increase your score for ${address}`
           );
         } else if (data.score > 5) {
+          alert("Your Score is greater than 5, you can post!");
           setEligible(true);
         } else {
           alert("Your Score should be greater than 5 To Write Blogs!");
