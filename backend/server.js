@@ -106,9 +106,21 @@ app.post("/update-post-data", async (req, res) => {
     if (_id && typeof _id === "string" && ObjectId.isValid(_id)) {
       const objectId = new ObjectId(_id);
       await updatePostData(objectId, updateData);
+
       if (updateData.check === true) {
-        await resolverContract.updateAccessForAttester(updateData.Owner, true);
+        // Call the contract function to update access
+        const accessUpdated = await resolverContract.updateAccessForAttester(
+          updateData.Owner,
+          true
+        );
+
+        // Check if the access was updated successfully
+        if (!accessUpdated) {
+          // If access update failed, return an appropriate error response
+          return res.status(500).send("Failed to update access");
+        }
       }
+
       return res.status(200).send("Post data stored successfully!");
     } else {
       // If _id is missing or invalid, return a 400 Bad Request response
