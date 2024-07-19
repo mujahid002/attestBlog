@@ -1,3 +1,13 @@
+# All References for Schemas:
+
+Basic Resolver Contract for User Registration & Post Schemas: https://sepolia-optimistic.etherscan.io/address/0xd39F5578c1Ff23cD09FAeA4ab6FC11f97cbd46bD#code
+
+User Registration Schema: https://optimism-sepolia.easscan.org/schema/view/0xf35fa2d095ccffae542b34d6c93517447dc5b86b73029bab58a7b337f3a4b4e4
+
+Post Schema: https://optimism-sepolia.easscan.org/schema/view/0xee7db9351cddafb02e6a29ba5f1ac062a2bf741f1f7a9d4bf5b1aa69cab4e9a7
+
+Reaction Schema: https://optimism-sepolia.easscan.org/schema/view/0xbbd7ed70dd8e4f8069f67760ba854e2a9b8355c7df12ef795d229c96be68ae45
+
 ## Updated Schema
 
 https://optimism-sepolia.easscan.org/schema/view/0x4a56b373bd7d6804deb561b60eed5b6a981fac23b45fa800f38d53e91bb9f121
