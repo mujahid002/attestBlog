@@ -1,106 +1,89 @@
-// pages/register.js
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/router";
+import { useGlobalContext } from "../context/Store";
+import WalletConnect from "../components/walletConnection";
 
-export default function Register() {
-  const [formData, setFormData] = useState({
-    username: "",
-    bio: "",
-    profilePicture: "https://via.placeholder.com/150", // default image link
-  });
+export default function Home() {
+  const { userAddress, setUserAddress, adminAddress } = useGlobalContext();
+  const [loading, setLoading] = useState(true);
+  const [registrationStatus, setRegistrationStatus] = useState(null);
+  const router = useRouter();
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prevData) => ({
-      ...prevData,
-      [name]: value,
-    }));
-  };
+  useEffect(() => {
+    const checkAddressType = async () => {
+      if (!userAddress) {
+        console.log("User address not available yet.");
+        return;
+      }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+      console.log("Admin address from context:", adminAddress);
+      console.log("User address from context:", userAddress);
 
-    // Make an API call to the attestation service
-    const response = await fetch("/api/register", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(formData),
-    });
+      try {
+        if (userAddress.toLowerCase() === adminAddress.toLowerCase()) {
+          console.log("User is an admin, redirecting to admin page.");
+          router.push("/admin");
+        } else {
+          console.log("User is not an admin, checking registration status.");
+          const response = await fetch(
+            "http://localhost:3001/check-registration",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ userAddress }),
+            }
+          );
 
-    const data = await response.json();
-    if (data.success) {
-      alert("Registration successful");
-      // Redirect or update UI accordingly
+          if (!response.ok) {
+            throw new Error("Failed to fetch registration status");
+          }
+
+          const data = await response.json();
+
+          if (data.registered) {
+            console.log("User is registered, checking approval status.");
+            setRegistrationStatus(data.approved ? "approved" : "pending");
+            if (data.approved) {
+              router.push("/dashboard");
+            } else {
+              router.push("/pending");
+            }
+          } else {
+            console.log(
+              "User is not registered, redirecting to register page."
+            );
+            setRegistrationStatus("not-registered");
+            alert("You need to register first");
+            router.push("/register");
+          }
+        }
+      } catch (error) {
+        console.error(
+          "Error checking address type or registration status:",
+          error
+        );
+        alert("An error occurred while checking registration status.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (userAddress) {
+      setLoading(true);
+      checkAddressType();
     } else {
-      alert("Registration failed: " + data.message);
+      setLoading(false);
     }
-  };
+  }, [userAddress, adminAddress, router]);
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-md">
-        <h1 className="text-2xl font-bold mb-4">Register</h1>
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label
-              className="block text-gray-700 text-sm font-bold mb-2"
-              htmlFor="username"
-            >
-              Username
-            </label>
-            <input
-              type="text"
-              id="username"
-              name="username"
-              value={formData.username}
-              onChange={handleChange}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              required
-            />
-          </div>
-          <div className="mb-4">
-            <label
-              className="block text-gray-700 text-sm font-bold mb-2"
-              htmlFor="bio"
-            >
-              Bio
-            </label>
-            <textarea
-              id="bio"
-              name="bio"
-              value={formData.bio}
-              onChange={handleChange}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              required
-            />
-          </div>
-          <div className="mb-4">
-            <label
-              className="block text-gray-700 text-sm font-bold mb-2"
-              htmlFor="profilePicture"
-            >
-              Profile Picture (Default Used)
-            </label>
-            <input
-              type="text"
-              id="profilePicture"
-              name="profilePicture"
-              value={formData.profilePicture}
-              onChange={handleChange}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              disabled
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <button
-              type="submit"
-              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-            >
-              Register
-            </button>
-          </div>
-        </form>
+        <h1 className="text-2xl text-black font-bold mb-4">Home</h1>
+        {!userAddress && <WalletConnect />}
+        {loading && <div>Loading...</div>}
       </div>
     </div>
   );
