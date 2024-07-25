@@ -24,7 +24,7 @@ export default function Register() {
     e.preventDefault();
 
     // Make an API call to the attestation service
-    const response = await fetch("/api/register", {
+    const response = await fetch("http://localhost/3001/user-register", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
