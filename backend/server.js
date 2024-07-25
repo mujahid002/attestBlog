@@ -1,12 +1,8 @@
 const express = require("express");
 const connectMongo = require("./database/connect-mongo");
-const { ObjectId } = require("mongodb");
-const { resolverContract } = require("./constants/index");
-const ethers = require("ethers");
 const cors = require("cors");
 
 const app = express();
-const { storePost, fetchPostData } = require("./database/index");
 app.use(cors());
 
 app.use(express.json());
@@ -27,55 +23,100 @@ const registerUser = async (userData) => {
   });
   await client.close();
 };
-async function handler(req, res) {
-  if (req.method === "POST") {
-    try {
-      const { username, bio, profilePicture, userAddress } = req.body;
-      if (!username || !bio || !profilePicture || !userAddress) {
-        return res.status(400).send("Invalid user data!");
-      }
 
-      await registerUser({ username, bio, profilePicture, userAddress });
-      return res.status(200).send("User registered successfully!");
-    } catch (error) {
-      console.error("Error registering user:", error);
-      return res.status(500).send("Internal server error");
-    }
-  } else {
-    return res.status(405).send("Method Not Allowed");
+app.post("/check-registration", async (req, res) => {
+  const { userAddress } = req.body;
+  if (!userAddress) {
+    return res.status(400).send("Invalid user address!");
   }
-}
 
-app.post("/store-post", async (req, res) => {
   try {
-    const { postData } = req.body;
-    if (!postData) {
-      return res.status(400).send("Invalid post data!");
+    const client = await connectMongo();
+    const db = client.db("attest");
+    const collection = db.collection("userRegistrationApprovals");
+
+    const registration = await collection.findOne({ userAddress });
+
+    if (registration) {
+      res
+        .status(200)
+        .json({ registered: true, approved: registration.approved });
+    } else {
+      res.status(200).json({ registered: false });
     }
-    await storePost(postData);
-    return res.status(200).send("Post data stored successfully!");
   } catch (error) {
-    console.error("Error storing post data:", error);
-    return res.status(500).send("Internal server error");
+    console.error("Error checking registration status:", error);
+    res.status(500).send("Internal server error");
   }
 });
 
-app.get("/fetch-posts", async (req, res) => {
+app.post("/user-register", async (req, res) => {
+  const { username, bio, profilePicture, userAddress } = req.body;
+  if (!username || !bio || !profilePicture || !userAddress) {
+    return res.status(400).send("Invalid registration data!");
+  }
+
   try {
-    const postData = await fetchPostData();
-    if (!postData) {
-      return res.status(404).send("No attest data found");
-    }
-    return res.status(200).json(postData);
+    const client = await connectMongo();
+    const db = client.db("attest");
+    const collection = db.collection("userRegistrationApprovals");
+
+    const timestamp = new Date();
+    const userRegistrationData = {
+      userAddress,
+      username,
+      bio,
+      profilePicture,
+      timestamp: timestamp,
+      approved: false,
+    };
+
+    await collection.insertOne(userRegistrationData);
+    res.status(200).send("Registration data stored successfully!");
   } catch (error) {
-    console.error("Error fetching blog attests:", error);
-    return res.status(500).send("Internal server error");
+    console.error("Error storing registration data:", error);
+    res.status(500).send("Internal server error");
   }
 });
 
-const port = process.env.PORT || 7001;
+app.get("/get-registrations", async (req, res) => {
+  try {
+    const client = await connectMongo();
+    const db = client.db("attest");
+    const collection = db.collection("userRegistrationApprovals");
+
+    const registrations = await collection.find({}).toArray();
+    res.status(200).json(registrations);
+  } catch (error) {
+    console.error("Error fetching registrations:", error);
+    res.status(500).send("Internal server error");
+  }
+});
+
+app.post("/approve-registration", async (req, res) => {
+  const { userAddress, approved } = req.body;
+  if (!userAddress) {
+    return res.status(400).send("Invalid user address!");
+  }
+
+  try {
+    const client = await connectMongo();
+    const db = client.db("attest");
+    const collection = db.collection("userRegistrationApprovals");
+
+    await collection.updateOne({ userAddress }, { $set: { approved } });
+    res.status(200).send({
+      success: true,
+      message: "User approval status updated successfully!",
+    });
+  } catch (error) {
+    console.error("Error updating user approval status:", error);
+    res.status(500).send("Internal server error");
+  }
+});
+
+const port = process.env.PORT || 3001;
 app.listen(port, async () => {
+  //   await connectMongo();
   console.log(`Server listening on port: ${port}`);
-
-  // connectMongo();
 });
