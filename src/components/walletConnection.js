@@ -57,7 +57,7 @@ const WalletConnect = () => {
     try {
       await window.ethereum.request({
         method: "wallet_switchEthereumChain",
-        params: [{ chainId: "0xaa36a7" }], // Optimism Sepolia chain ID in hex
+        params: [{ chainId: "0xaa37dc" }], // Optimism Sepolia chain ID in hex
       });
     } catch (error) {
       setError("Failed to switch network: " + error.message);
