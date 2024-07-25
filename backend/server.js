@@ -6,16 +6,7 @@ const ethers = require("ethers");
 const cors = require("cors");
 
 const app = express();
-const {
-  storeUserAttest,
-  storePost,
-  updatePostData,
-  fetchUserPostData,
-  storeUserComment,
-  fetchPostData,
-  fetchAttestData,
-  fetchUserBlogAttest,
-} = require("./database/index");
+const { storePost, fetchPostData } = require("./database/index");
 app.use(cors());
 
 app.use(express.json());
@@ -24,64 +15,37 @@ app.use(express.urlencoded({ extended: true }));
 app.get("/", async (req, res) => {
   res.status(200).send("Working on 7001 PORT!");
 });
-app.get("/fetch-attests", async (req, res) => {
-  try {
-    const blogAttests = await fetchAttestData();
-    if (!blogAttests) {
-      return res.status(404).send("No attest data found");
-    }
-    return res.status(200).json(blogAttests);
-  } catch (error) {
-    console.error("Error fetching blog attests:", error);
-    return res.status(500).send("Internal server error");
-  }
-});
-app.get("/fetch-user-attests/:userAddress", async (req, res) => {
-  try {
-    const { userAddress } = req.params;
 
-    // Check if userAddress is not provided or empty
-    if (!userAddress || userAddress.trim() === "") {
-      return res.status(400).send("Invalid user address!");
-    }
+const registerUser = async (userData) => {
+  const client = await connectMongo();
+  const db = client.db("attest");
+  const collection = db.collection("userRegistrationApprovals");
+  await collection.insertOne({
+    ...userData,
+    registeredTimestamp: new Date(),
+    approved: false,
+  });
+  await client.close();
+};
+async function handler(req, res) {
+  if (req.method === "POST") {
+    try {
+      const { username, bio, profilePicture, userAddress } = req.body;
+      if (!username || !bio || !profilePicture || !userAddress) {
+        return res.status(400).send("Invalid user data!");
+      }
 
-    const blogAttests = await fetchUserBlogAttest(userAddress.toString());
-    if (!blogAttests || blogAttests.length === 0) {
-      return res.status(404).send("No attest data found for the user");
+      await registerUser({ username, bio, profilePicture, userAddress });
+      return res.status(200).send("User registered successfully!");
+    } catch (error) {
+      console.error("Error registering user:", error);
+      return res.status(500).send("Internal server error");
     }
-    return res.status(200).json(blogAttests);
-  } catch (error) {
-    console.error("Error fetching user blog attests:", error);
-    return res.status(500).send("Internal server error");
+  } else {
+    return res.status(405).send("Method Not Allowed");
   }
-});
+}
 
-app.post("/store-attest", async (req, res) => {
-  try {
-    const { attestedData } = req.body;
-    if (!attestedData) {
-      return res.status(400).send("Invalid attest data!");
-    }
-    await storeUserAttest(attestedData);
-    return res.status(200).send("Attested data stored successfully!");
-  } catch (error) {
-    console.error("Error storing attest data:", error);
-    return res.status(500).send("Internal server error");
-  }
-});
-app.post("/store-comment", async (req, res) => {
-  try {
-    const { attestedComment } = req.body;
-    if (!attestedComment) {
-      return res.status(400).send("Invalid attest data!");
-    }
-    await storeUserComment(attestedComment);
-    return res.status(200).send("Attested data stored successfully!");
-  } catch (error) {
-    console.error("Error storing attest data:", error);
-    return res.status(500).send("Internal server error");
-  }
-});
 app.post("/store-post", async (req, res) => {
   try {
     const { postData } = req.body;
@@ -95,59 +59,10 @@ app.post("/store-post", async (req, res) => {
     return res.status(500).send("Internal server error");
   }
 });
-app.post("/update-post-data", async (req, res) => {
-  try {
-    const { updateData } = req.body;
-
-    const _id = updateData.id;
-
-    console.log("THE _ID IS", _id);
-
-    if (_id && typeof _id === "string" && ObjectId.isValid(_id)) {
-      const objectId = new ObjectId(_id);
-      await updatePostData(objectId, updateData);
-
-      if (updateData.check === true) {
-        // Call the contract function to update access
-        const accessUpdated = await resolverContract.updateAccessForAttester(
-          updateData.Owner,
-          true
-        );
-
-        // Check if the access was updated successfully
-        if (!accessUpdated) {
-          // If access update failed, return an appropriate error response
-          return res.status(500).send("Failed to update access");
-        }
-      }
-
-      return res.status(200).send("Post data stored successfully!");
-    } else {
-      // If _id is missing or invalid, return a 400 Bad Request response
-      return res.status(400).send("Invalid _id provided");
-    }
-  } catch (error) {
-    console.error("Error updating post data:", error);
-    return res.status(500).send("Internal server error");
-  }
-});
 
 app.get("/fetch-posts", async (req, res) => {
   try {
     const postData = await fetchPostData();
-    if (!postData) {
-      return res.status(404).send("No attest data found");
-    }
-    return res.status(200).json(postData);
-  } catch (error) {
-    console.error("Error fetching blog attests:", error);
-    return res.status(500).send("Internal server error");
-  }
-});
-app.get(`/fetch-post-data`, async (req, res) => {
-  try {
-    const { userAddress } = req.query;
-    const postData = await fetchUserPostData(userAddress);
     if (!postData) {
       return res.status(404).send("No attest data found");
     }
