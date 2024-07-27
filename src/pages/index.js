@@ -4,7 +4,7 @@ import { useGlobalContext } from "../context/Store";
 import WalletConnect from "../components/walletConnection";
 
 export default function Home() {
-  const { userAddress, setUserAddress, adminAddress } = useGlobalContext();
+  const { userAddress, adminAddress } = useGlobalContext();
   const [loading, setLoading] = useState(true);
   const [registrationStatus, setRegistrationStatus] = useState(null);
   const router = useRouter();
@@ -13,6 +13,7 @@ export default function Home() {
     const checkAddressType = async () => {
       if (!userAddress) {
         console.log("User address not available yet.");
+        setLoading(false);
         return;
       }
 
@@ -48,7 +49,7 @@ export default function Home() {
             if (data.approved) {
               router.push("/dashboard");
             } else {
-              router.push("/pending");
+              router.push("/register");
             }
           } else {
             console.log(
