@@ -1,35 +1,42 @@
 import { useEffect, useState } from "react";
 import { useGlobalContext } from "../context/Store";
 import WalletConnect from "../components/walletConnection";
+import { useRouter } from "next/router";
 
 export default function Register() {
   const { userAddress } = useGlobalContext();
-
   const [formData, setFormData] = useState({
     username: "",
     bio: "",
     profilePicture: "https://via.placeholder.com/150", // default image link
   });
-
-  const [registrationStatus, setRegistrationStatus] = useState(null); // null, 'approved', 'pending', 'not-registered'
+  const [registrationStatus, setRegistrationStatus] = useState(null); // null, 'approved', 'pending', 'not-registered', 'attested'
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     const checkRegistrationStatus = async () => {
       if (userAddress) {
         try {
-          const response = await fetch("http://localhost:3001/check-registration", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ userAddress }),
-          });
+          const response = await fetch(
+            "http://localhost:3001/check-registration",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ userAddress }),
+            }
+          );
 
           const data = await response.json();
 
           if (data.registered) {
-            setRegistrationStatus(data.approved ? "approved" : "pending");
+            if (data.approved) {
+              setRegistrationStatus(data.attested ? "attested" : "approved");
+            } else {
+              setRegistrationStatus("pending");
+            }
           } else {
             setRegistrationStatus("not-registered");
           }
@@ -69,13 +76,37 @@ export default function Register() {
       const data = await response.json();
       if (data.success) {
         alert("Registration successful");
-        // Redirect or update UI accordingly
+        // Update the registration status after successful registration
+        setRegistrationStatus("pending");
       } else {
         alert("Registration failed: " + data.message);
       }
     } catch (error) {
       console.error("There was an error with the registration:", error);
       alert("Registration failed. Please try again.");
+    }
+  };
+
+  const handleAttest = async () => {
+    try {
+      const response = await fetch("http://localhost:3001/attest-profile", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ userAddress }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        alert("Profile attested successfully");
+        setRegistrationStatus("attested");
+      } else {
+        alert("Profile attestation failed: " + data.message);
+      }
+    } catch (error) {
+      console.error("There was an error with the attestation:", error);
+      alert("Profile attestation failed. Please try again.");
     }
   };
 
@@ -86,19 +117,44 @@ export default function Register() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-md">
-        <h1 className="text-2xl text-black font-bold mb-4">User Registration</h1>
+        <h1 className="text-2xl text-black font-bold mb-4">
+          User Registration
+        </h1>
         {!userAddress ? (
           <WalletConnect />
         ) : registrationStatus === "approved" ? (
-          <p className="text-green-500">You are already approved!</p>
+          <>
+            <p className="text-green-500">You are already approved!</p>
+            <button
+              onClick={handleAttest}
+              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mt-4"
+            >
+              Attest Profile
+            </button>
+          </>
         ) : registrationStatus === "pending" ? (
           <p className="text-yellow-500">Your registration is still pending.</p>
+        ) : registrationStatus === "attested" ? (
+          <>
+            <p className="text-green-500">Your profile is attested!</p>
+            <button
+              onClick={() => router.push("/dashboard")}
+              className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mt-4"
+            >
+              Go to Dashboard
+            </button>
+          </>
         ) : (
           <>
-            <p className="mb-4 text-green-500">Connected Wallet: {userAddress}</p>
+            <p className="mb-4 text-green-500">
+              Connected Wallet: {userAddress}
+            </p>
             <form onSubmit={handleSubmit}>
               <div className="mb-4">
-                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="username">
+                <label
+                  className="block text-gray-700 text-sm font-bold mb-2"
+                  htmlFor="username"
+                >
                   Username
                 </label>
                 <input
@@ -112,7 +168,10 @@ export default function Register() {
                 />
               </div>
               <div className="mb-4">
-                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="bio">
+                <label
+                  className="block text-gray-700 text-sm font-bold mb-2"
+                  htmlFor="bio"
+                >
                   Bio
                 </label>
                 <textarea
@@ -125,7 +184,10 @@ export default function Register() {
                 />
               </div>
               <div className="mb-4">
-                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="profilePicture">
+                <label
+                  className="block text-gray-700 text-sm font-bold mb-2"
+                  htmlFor="profilePicture"
+                >
                   Profile Picture (Default Used)
                 </label>
                 <input
