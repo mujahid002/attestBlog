@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { useGlobalContext } from "../context/Store";
-import WalletConnect from "../components/WalletConnect";
+import WalletConnect from "../components/walletConnection";
 import { useRouter } from "next/router";
 
 export default function Admin() {
-  const { userAddress, adminAddress, setUserAddress } = useGlobalContext();
+  const { userAddress, adminAddress } = useGlobalContext();
   const [registrations, setRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [disabledButtons, setDisabledButtons] = useState({});
   const router = useRouter();
 
   useEffect(() => {
@@ -14,12 +15,14 @@ export default function Admin() {
       if (!userAddress) {
         // Redirect to home if wallet is not connected
         router.push("/");
-      } else if (userAddress === adminAddress) {
-        fetchRegistrations();
-      } else {
+        return;
+      } else if (userAddress.toLowerCase() !== adminAddress.toLowerCase()) {
         // Redirect to home if not admin
         router.push("/");
+        return;
       }
+
+      fetchRegistrations();
     };
 
     checkUserAndFetch();
@@ -39,6 +42,7 @@ export default function Admin() {
   };
 
   const handleApprove = async (userAddress) => {
+    setDisabledButtons((prev) => ({ ...prev, [userAddress]: true }));
     const response = await fetch("http://localhost:3001/approve-registration", {
       method: "POST",
       headers: {
@@ -53,17 +57,22 @@ export default function Admin() {
       fetchRegistrations();
     } else {
       alert("Failed to approve user: " + data.message);
+      setDisabledButtons((prev) => ({ ...prev, [userAddress]: false }));
     }
   };
 
   const handleDisapprove = async (userAddress) => {
-    const response = await fetch("http://localhost:3001/approve-registration", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ userAddress, approved: false }),
-    });
+    setDisabledButtons((prev) => ({ ...prev, [userAddress]: true }));
+    const response = await fetch(
+      "http://localhost:3001/disapprove-registration",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ userAddress }),
+      }
+    );
 
     const data = await response.json();
     if (data.success) {
@@ -71,6 +80,7 @@ export default function Admin() {
       fetchRegistrations();
     } else {
       alert("Failed to disapprove user: " + data.message);
+      setDisabledButtons((prev) => ({ ...prev, [userAddress]: false }));
     }
   };
 
@@ -80,45 +90,41 @@ export default function Admin() {
         <h1 className="text-2xl text-black font-bold mb-4">Admin Dashboard</h1>
         {!userAddress ? (
           <WalletConnect />
-        ) : userAddress === adminAddress ? (
-          <>
-            {loading ? (
-              <div>Loading...</div>
-            ) : (
-              <ul>
-                {registrations.map((reg) => (
-                  <li key={reg.userAddress} className="mb-4">
-                    <div className="mb-2">
-                      <strong>Username:</strong> {reg.username}
-                    </div>
-                    <div className="mb-2">
-                      <strong>Bio:</strong> {reg.bio}
-                    </div>
-                    <div className="mb-2">
-                      <strong>Profile Picture:</strong>{" "}
-                      <img src={reg.profilePicture} alt="Profile" width={50} />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <button
-                        onClick={() => handleApprove(reg.userAddress)}
-                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                      >
-                        Approve
-                      </button>
-                      <button
-                        onClick={() => handleDisapprove(reg.userAddress)}
-                        className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                      >
-                        Disapprove
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </>
+        ) : loading ? (
+          <div>Loading...</div>
         ) : (
-          <p className="text-red-500">Unauthorized access</p>
+          <ul>
+            {registrations.map((reg) => (
+              <li key={reg.userAddress} className="mb-4">
+                <div className="mb-2 text-black">
+                  <strong>Username:</strong> {reg.username}
+                </div>
+                <div className="mb-2 text-black">
+                  <strong>Bio:</strong> {reg.bio}
+                </div>
+                <div className="mb-2 text-black">
+                  <strong>Profile Picture:</strong>{" "}
+                  <img src={reg.profilePicture} alt="Profile" width={50} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={() => handleApprove(reg.userAddress)}
+                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                    disabled={disabledButtons[reg.userAddress]}
+                  >
+                    Approve
+                  </button>
+                  <button
+                    onClick={() => handleDisapprove(reg.userAddress)}
+                    className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                    disabled={disabledButtons[reg.userAddress]}
+                  >
+                    Disapprove
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
         )}
       </div>
     </div>
