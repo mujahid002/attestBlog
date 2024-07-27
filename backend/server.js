@@ -12,18 +12,6 @@ app.get("/", async (req, res) => {
   res.status(200).send("Working on 7001 PORT!");
 });
 
-const registerUser = async (userData) => {
-  const client = await connectMongo();
-  const db = client.db("attest");
-  const collection = db.collection("userRegistrationApprovals");
-  await collection.insertOne({
-    ...userData,
-    registeredTimestamp: new Date(),
-    approved: false,
-  });
-  await client.close();
-};
-
 app.post("/check-registration", async (req, res) => {
   const { userAddress } = req.body;
   if (!userAddress) {
@@ -52,14 +40,33 @@ app.post("/check-registration", async (req, res) => {
 
 app.post("/user-register", async (req, res) => {
   const { username, bio, profilePicture, userAddress } = req.body;
+
   if (!username || !bio || !profilePicture || !userAddress) {
-    return res.status(400).send("Invalid registration data!");
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid registration data!" });
   }
 
   try {
     const client = await connectMongo();
     const db = client.db("attest");
     const collection = db.collection("userRegistrationApprovals");
+
+    const existingUser = await collection.findOne({ userAddress });
+
+    if (existingUser) {
+      if (existingUser.approved) {
+        return res.status(200).json({
+          success: false,
+          message: "You are already registered and approved!",
+        });
+      } else {
+        return res.status(200).json({
+          success: false,
+          message: "You are already registered but still pending approval!",
+        });
+      }
+    }
 
     const timestamp = new Date();
     const userRegistrationData = {
@@ -72,10 +79,13 @@ app.post("/user-register", async (req, res) => {
     };
 
     await collection.insertOne(userRegistrationData);
-    res.status(200).send("Registration data stored successfully!");
+    res.status(200).json({
+      success: true,
+      message: "Registration data stored successfully!",
+    });
   } catch (error) {
     console.error("Error storing registration data:", error);
-    res.status(500).send("Internal server error");
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 });
 
@@ -115,8 +125,29 @@ app.post("/approve-registration", async (req, res) => {
   }
 });
 
+app.post("/disapprove-registration", async (req, res) => {
+  const { userAddress } = req.body;
+  if (!userAddress) {
+    return res.status(400).send("Invalid user address!");
+  }
+
+  try {
+    const client = await connectMongo();
+    const db = client.db("attest");
+    const collection = db.collection("userRegistrationApprovals");
+
+    await collection.deleteOne({ userAddress });
+    res.status(200).send({
+      success: true,
+      message: "User registration disapproved and deleted successfully!",
+    });
+  } catch (error) {
+    console.error("Error deleting user registration:", error);
+    res.status(500).send("Internal server error");
+  }
+});
+
 const port = process.env.PORT || 3001;
 app.listen(port, async () => {
-  //   await connectMongo();
   console.log(`Server listening on port: ${port}`);
 });
