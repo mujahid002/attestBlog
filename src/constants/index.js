@@ -30,6 +30,10 @@ export const easProvider = async () => {
 //   return provider.getSigner();
 // };
 
-export const EASContractAddress = "0x4200000000000000000000000000000000000021"; // OP Sepolia v0.26
-export const schemaUID =
-  "0x08cf4bbd043399f5b4ac08c48204c0f4cd7a3cb939ec7a1da08cb5e010e65193";
+export const easContractAddress = "0x4200000000000000000000000000000000000021"; // OP Sepolia v0.26
+export const userSchemaUID =
+  "0xf35fa2d095ccffae542b34d6c93517447dc5b86b73029bab58a7b337f3a4b4e4";
+export const postSchemaUID =
+  "0xee7db9351cddafb02e6a29ba5f1ac062a2bf741f1f7a9d4bf5b1aa69cab4e9a7";
+export const reactionSchemaUID =
+  "0xbbd7ed70dd8e4f8069f67760ba854e2a9b8355c7df12ef795d229c96be68ae45";
