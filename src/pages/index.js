@@ -6,7 +6,6 @@ import WalletConnect from "../components/walletConnection";
 export default function Home() {
   const { userAddress, adminAddress } = useGlobalContext();
   const [loading, setLoading] = useState(true);
-  const [registrationStatus, setRegistrationStatus] = useState(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -44,18 +43,27 @@ export default function Home() {
           const data = await response.json();
 
           if (data.registered) {
-            console.log("User is registered, checking approval status.");
-            setRegistrationStatus(data.approved ? "approved" : "pending");
-            if (data.approved) {
+            console.log(
+              "User is registered, checking approval and attestation status."
+            );
+            if (data.attestationId) {
+              console.log(
+                "User has valid attestation, redirecting to dashboard."
+              );
               router.push("/dashboard");
+            } else if (data.approved) {
+              console.log(
+                "User is approved but not attested, redirecting to registration for attestation."
+              );
+              router.push("/register");
             } else {
+              console.log("User registration is pending.");
               router.push("/register");
             }
           } else {
             console.log(
               "User is not registered, redirecting to register page."
             );
-            setRegistrationStatus("not-registered");
             alert("You need to register first");
             router.push("/register");
           }
