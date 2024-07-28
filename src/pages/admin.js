@@ -196,7 +196,7 @@ export default function Admin() {
           ) : (
             <ul>
               {posts.map((post) => (
-                <li key={post.author} className="mb-4">
+                <li key={post._id} className="mb-4">
                   <div className="mb-2 text-black">
                     <strong>Theme:</strong> {post.theme}
                   </div>
@@ -204,7 +204,11 @@ export default function Admin() {
                     <strong>Content:</strong> {post.content}
                   </div>
                   <div className="mb-2 text-black">
-                    <strong>Author:</strong> {post.author}
+                    <strong>Author:</strong> {post.userDetails.username} (
+                    {post.userDetails.userAddress})
+                  </div>
+                  <div className="mb-2 text-black">
+                    <strong>User ID:</strong> {post.userDetails.userID}
                   </div>
                   <div className="flex items-center justify-between">
                     <button
