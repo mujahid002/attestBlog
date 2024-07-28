@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useGlobalContext } from "../context/Store";
 import WalletConnect from "../components/walletConnection";
 import { useRouter } from "next/router";
+import { userAttest } from "../attest/userAttest"; // Assuming the userAttest function is in utils folder
 
 export default function Register() {
   const { userAddress } = useGlobalContext();
@@ -32,8 +33,10 @@ export default function Register() {
           const data = await response.json();
 
           if (data.registered) {
-            if (data.approved) {
-              setRegistrationStatus(data.attested ? "attested" : "approved");
+            if (data.approved && data.attested) {
+              setRegistrationStatus("attested");
+            } else if (data.approved) {
+              setRegistrationStatus("approved");
             } else {
               setRegistrationStatus("pending");
             }
@@ -87,22 +90,58 @@ export default function Register() {
     }
   };
 
-  const handleAttest = async () => {
+  const handleUserAttest = async () => {
     try {
-      const response = await fetch("http://localhost:3001/attest-profile", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ userAddress }),
-      });
+      // Fetch user data from backend
+      const response = await fetch(
+        `http://localhost:3001/get-user-data?userAddress=${userAddress}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       const data = await response.json();
-      if (data.success) {
-        alert("Profile attested successfully");
-        setRegistrationStatus("attested");
+      if (!data.success) {
+        throw new Error("Failed to fetch user data: " + data.message);
+      }
+
+      const attestationData = {
+        owner: userAddress,
+        userName: data.userData.username,
+        bio: data.userData.bio,
+        profilePicture: data.userData.profilePicture,
+        timestamp: data.userData.timestamp,
+        approved: data.userData.approved,
+      };
+
+      console.log("THE data", attestationData);
+
+      const attestationId = await userAttest(attestationData);
+
+      if (attestationId) {
+        const updateResponse = await fetch(
+          "http://localhost:3001/update-user-attestation",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ userAddress, attestationId }),
+          }
+        );
+
+        const updateData = await updateResponse.json();
+        if (updateData.success) {
+          alert("Profile attested successfully");
+          setRegistrationStatus("attested");
+        } else {
+          alert("Failed to update attestation ID: " + updateData.message);
+        }
       } else {
-        alert("Profile attestation failed: " + data.message);
+        alert("Attestation failed. Please try again.");
       }
     } catch (error) {
       console.error("There was an error with the attestation:", error);
@@ -120,13 +159,14 @@ export default function Register() {
         <h1 className="text-2xl text-black font-bold mb-4">
           User Registration
         </h1>
+        <p className="mb-4 text-green-500">Connected Wallet: {userAddress}</p>
         {!userAddress ? (
           <WalletConnect />
         ) : registrationStatus === "approved" ? (
           <>
             <p className="text-green-500">You are already approved!</p>
             <button
-              onClick={handleAttest}
+              onClick={handleUserAttest}
               className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mt-4"
             >
               Attest Profile
@@ -146,9 +186,6 @@ export default function Register() {
           </>
         ) : (
           <>
-            <p className="mb-4 text-green-500">
-              Connected Wallet: {userAddress}
-            </p>
             <form onSubmit={handleSubmit}>
               <div className="mb-4">
                 <label
