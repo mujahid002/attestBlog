@@ -1,6 +1,7 @@
 const express = require("express");
 const connectMongo = require("./database/connect-mongo");
 const cors = require("cors");
+const { ObjectId } = require("mongodb");
 
 const app = express();
 app.use(cors());
@@ -9,7 +10,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.get("/", async (req, res) => {
-  res.status(200).send("Working on 7001 PORT!");
+  res.status(200).send("Working on 3001 PORT!");
 });
 
 app.post("/check-registration", async (req, res) => {
@@ -26,9 +27,11 @@ app.post("/check-registration", async (req, res) => {
     const registration = await collection.findOne({ userAddress });
 
     if (registration) {
-      res
-        .status(200)
-        .json({ registered: true, approved: registration.approved });
+      res.status(200).json({
+        registered: true,
+        approved: registration.approved,
+        attested: registration.attestationId ? registration.attestationId : "",
+      });
     } else {
       res.status(200).json({ registered: false });
     }
@@ -68,7 +71,7 @@ app.post("/user-register", async (req, res) => {
       }
     }
 
-    const timestamp = new Date();
+    const timestamp = Math.floor(Date.now() / 1000); // Unix timestamp in seconds
     const userRegistrationData = {
       userAddress,
       username,
@@ -186,23 +189,7 @@ app.post("/create-post", async (req, res) => {
     const db = client.db("attest");
     const collection = db.collection("posts");
 
-    const existingPost = await collection.findOne({ author });
-
-    if (existingPost) {
-      if (existingPost.approved) {
-        return res.status(200).json({
-          success: false,
-          message: "You already have an approved post!",
-        });
-      } else {
-        return res.status(200).json({
-          success: false,
-          message: "You already have a post pending approval!",
-        });
-      }
-    }
-
-    const timestamp = new Date();
+    const timestamp = Math.floor(Date.now() / 1000);
     const postData = {
       theme,
       content,
@@ -226,10 +213,29 @@ app.get("/get-posts", async (req, res) => {
   try {
     const client = await connectMongo();
     const db = client.db("attest");
-    const collection = db.collection("posts");
+    const postsCollection = db.collection("posts");
+    const usersCollection = db.collection("userRegistrationApprovals");
 
-    const posts = await collection.find({}).toArray();
-    res.status(200).json(posts);
+    const posts = await postsCollection.find({}).toArray();
+
+    // Fetch user details for each post
+    const postsWithUserDetails = await Promise.all(
+      posts.map(async (post) => {
+        const user = await usersCollection.findOne({
+          userAddress: post.author,
+        });
+        return {
+          ...post,
+          userDetails: {
+            username: user.username,
+            userAddress: user.userAddress,
+            attestationId: user.attestationId,
+          },
+        };
+      })
+    );
+
+    res.status(200).json(postsWithUserDetails);
   } catch (error) {
     console.error("Error fetching posts:", error);
     res.status(500).send("Internal server error");
@@ -302,6 +308,163 @@ app.post("/attest-profile", async (req, res) => {
   } catch (error) {
     console.error("Error attesting profile:", error);
     res.status(500).send("Internal server error");
+  }
+});
+
+app.post("/attest-post", async (req, res) => {
+  const { userAddress, postId } = req.body;
+
+  if (!userAddress || !postId) {
+    return res.status(400).json({ success: false, message: "Invalid data!" });
+  }
+
+  try {
+    // Here you would perform the actual attestation logic with the blockchain
+    const attestationId = "mock-attestation-id"; // Replace with actual attestation logic
+
+    const client = await connectMongo();
+    const db = client.db("attest");
+    const postsCollection = db.collection("posts");
+
+    await postsCollection.updateOne(
+      { _id: new ObjectId(postId) },
+      { $set: { attested: true, attestationId } }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Post attested successfully!",
+      attestationId,
+    });
+  } catch (error) {
+    console.error("Error attesting post:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+});
+
+app.post("/update-user-attestation", async (req, res) => {
+  const { userAddress, attestationId } = req.body;
+  if (!userAddress || !attestationId) {
+    return res.status(400).send("Invalid data!");
+  }
+
+  try {
+    const client = await connectMongo();
+    const db = client.db("attest");
+    const collection = db.collection("userRegistrationApprovals");
+
+    await collection.updateOne({ userAddress }, { $set: { attestationId } });
+    res.status(200).send({
+      success: true,
+      message: "User attestation ID updated successfully!",
+    });
+  } catch (error) {
+    console.error("Error updating attestation ID:", error);
+    res.status(500).send("Internal server error");
+  }
+});
+
+app.post("/update-post-attestation", async (req, res) => {
+  const { postId, attestationId } = req.body;
+
+  if (!postId || !attestationId) {
+    return res.status(400).json({ success: false, message: "Invalid data!" });
+  }
+
+  try {
+    const client = await connectMongo();
+    const db = client.db("attest");
+    const collection = db.collection("posts");
+
+    await collection.updateOne(
+      { _id: new ObjectId(postId) },
+      { $set: { attestationId } }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Post attestation updated successfully!",
+    });
+  } catch (error) {
+    console.error("Error updating post attestation:", error);
+    res.status(500).send("Internal server error");
+  }
+});
+
+app.get("/get-post-data", async (req, res) => {
+  const { postId } = req.query;
+
+  if (!postId) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid post ID!" });
+  }
+
+  try {
+    const client = await connectMongo();
+    const db = client.db("attest");
+    const collection = db.collection("posts");
+
+    const postData = await collection.findOne({ _id: new ObjectId(postId) });
+
+    if (!postData) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Post not found!" });
+    }
+
+    res.status(200).json({ success: true, postData });
+  } catch (error) {
+    console.error("Error fetching post data:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+});
+
+app.get("/get-user-data", async (req, res) => {
+  const { userAddress } = req.query;
+  if (!userAddress) {
+    return res.status(400).send("Invalid user address!");
+  }
+
+  try {
+    const client = await connectMongo();
+    const db = client.db("attest");
+    const collection = db.collection("userRegistrationApprovals");
+
+    const userData = await collection.findOne({ userAddress });
+
+    if (!userData) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found!" });
+    }
+
+    res.status(200).json({ success: true, userData });
+  } catch (error) {
+    console.error("Error fetching user data:", error);
+    res.status(500).send("Internal server error");
+  }
+});
+
+app.post("/get-user-posts", async (req, res) => {
+  const { userAddress } = req.body;
+
+  if (!userAddress) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid user address!" });
+  }
+
+  try {
+    const client = await connectMongo();
+    const db = client.db("attest");
+    const postsCollection = db.collection("posts");
+
+    const posts = await postsCollection.find({ author: userAddress }).toArray();
+    res.status(200).json({ success: true, posts: posts });
+  } catch (error) {
+    console.error("Error fetching user posts:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 });
 const port = process.env.PORT || 3001;
