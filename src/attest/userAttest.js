@@ -5,13 +5,10 @@ import {
 import { ethers } from "ethers";
 import { easContractAddress, userSchemaUID } from "@/constants/index";
 
-export const attestOnChain = async (data) => {
+export const userAttest = async (data) => {
   try {
     if (!data) {
       throw new Error("Invalid input parameters");
-    }
-    if (!data.canPost) {
-      throw new Error("User Cannot Attest with this Data");
     }
 
     const provider = new ethers.BrowserProvider(window.ethereum);
@@ -19,7 +16,7 @@ export const attestOnChain = async (data) => {
 
     await window.ethereum.request({ method: "eth_requestAccounts" });
 
-    const signer = await provider.getSigner(data.Owner);
+    const signer = await provider.getSigner();
     console.log("Signer:", signer);
 
     // Initialize EAS instance
@@ -30,25 +27,25 @@ export const attestOnChain = async (data) => {
 
     // Initialize SchemaEncoder with the schema string
     const schemaEncoder = new SchemaEncoder(
-      "string Title, address Owner, bool canPost"
+      "string userName, string bio, string profilePicture, uint256 timestamp, bool approved"
     );
     const encodedData = schemaEncoder.encodeData([
-      { name: "Title", value: data.Title, type: "string" },
-      { name: "Owner", value: data.Owner, type: "address" },
-      { name: "canPost", value: data.canPost, type: "bool" },
+      { name: "userName", value: data.userName, type: "string" },
+      { name: "bio", value: data.bio, type: "string" },
+      { name: "profilePicture", value: data.profilePicture, type: "string" },
+      { name: "timestamp", value: BigInt(data.timestamp), type: "uint256" },
+      { name: "approved", value: data.approved, type: "bool" },
     ]);
 
     // Attest the data
     const tx = await eas.attest({
       schema: userSchemaUID,
       data: {
-        recipient: data.Owner,
-        // expirationTime: 0,
+        recipient: data.owner,
         revocable: true,
         data: encodedData,
       },
     });
-
     const userAttestationID = await tx.wait();
 
     console.log("User attestation UID:", userAttestationID);
