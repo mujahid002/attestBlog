@@ -391,6 +391,35 @@ app.post("/update-post-attestation", async (req, res) => {
   }
 });
 
+app.get("/get-user-data-by-id", async (req, res) => {
+  const { userId } = req.query;
+
+  if (!userId) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid user ID!" });
+  }
+
+  try {
+    const client = await connectMongo();
+    const db = client.db("attest");
+    const collection = db.collection("userRegistrationApprovals");
+
+    const userData = await collection.findOne({ _id: new ObjectId(userId) });
+
+    if (!userData) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found!" });
+    }
+
+    res.status(200).json({ success: true, userData });
+  } catch (error) {
+    console.error("Error fetching user data:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+});
+
 app.get("/get-post-data", async (req, res) => {
   const { postId } = req.query;
 
@@ -467,6 +496,81 @@ app.post("/get-user-posts", async (req, res) => {
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 });
+
+app.post("/react-to-user", async (req, res) => {
+  const { attestationId, reactionAttestationId } = req.body;
+  if (!reactionAttestationId || !attestationId) {
+    return res.status(400).send("Invalid data!");
+  }
+
+  try {
+    const client = await connectMongo();
+    const db = client.db("attest");
+    const collection = db.collection("userRegistrationApprovals");
+
+    const user = await collection.findOne({ attestationId });
+
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found!" });
+    }
+
+    await collection.updateOne(
+      { attestationId },
+      {
+        $push: {
+          reactions: reactionAttestationId,
+        },
+      }
+    );
+
+    res
+      .status(200)
+      .json({ success: true, message: "Reaction recorded successfully!" });
+  } catch (error) {
+    console.error("Error recording user reaction:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+});
+
+app.post("/react-to-post", async (req, res) => {
+  const { attestationId, reactionAttestationId } = req.body;
+  if (!attestationId || !reactionAttestationId) {
+    return res.status(400).send("Invalid data!");
+  }
+
+  try {
+    const client = await connectMongo();
+    const db = client.db("attest");
+    const collection = db.collection("posts");
+
+    const post = await collection.findOne({ attestationId });
+
+    if (!post) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Post not found!" });
+    }
+
+    await collection.updateOne(
+      { attestationId },
+      {
+        $push: {
+          reactions: reactionAttestationId,
+        },
+      }
+    );
+
+    res
+      .status(200)
+      .json({ success: true, message: "Reaction recorded successfully!" });
+  } catch (error) {
+    console.error("Error recording post reaction:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+});
+
 const port = process.env.PORT || 3001;
 app.listen(port, async () => {
   console.log(`Server listening on port: ${port}`);
