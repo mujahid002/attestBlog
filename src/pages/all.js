@@ -3,6 +3,13 @@ import { useGlobalContext } from "../context/Store";
 import WalletConnect from "../components/walletConnection";
 import { reactionAttest } from "@/attest/reactionAttest";
 
+import {
+  EAS as EAS150,
+  SchemaEncoder,
+} from "@ethereum-attestation-service/eas-sdk";
+import { ethers } from "ethers";
+import { easContractAddress, provider } from "@/constants/index";
+
 export default function All() {
   const { userAddress } = useGlobalContext();
   const [attestedUsers, setAttestedUsers] = useState([]);
@@ -11,27 +18,72 @@ export default function All() {
   const [reactions, setReactions] = useState({});
   const [comments, setComments] = useState({});
 
+  const [attestations, setAttestations] = useState([]);
+  const [attestationDetails, setAttestationDetails] = useState([]);
+
+  const fetchAttestations = async () => {
+    try {
+      const query = `
+        query {
+          schema(where: { id: "0xbbd7ed70dd8e4f8069f67760ba854e2a9b8355c7df12ef795d229c96be68ae45" }) {
+            attestations {
+              id
+            }
+          }
+        }
+      `;
+
+      const response = await fetch(
+        "https://optimism-sepolia.easscan.org/graphql",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            query,
+          }),
+        }
+      );
+
+      const result = await response.json();
+      const attestationIds = result.data.schema.attestations.map((a) => a.id);
+      console.log("attestationIds", attestationIds);
+      setAttestations(attestationIds);
+
+      const eas = new EAS150(easContractAddress);
+      eas.connect(provider);
+      const d = [];
+      attestations.map(async (uid) => {
+        const attestation = await eas.getAttestation(uid);
+        d.push(attestation);
+      });
+      setAttestationDetails(d);
+    } catch (error) {
+      console.error("Error fetching attestations:", error);
+    }
+  };
+  const fetchAttestedData = async () => {
+    try {
+      const [usersResponse, postsResponse] = await Promise.all([
+        fetch("http://localhost:3001/get-registrations"),
+        fetch("http://localhost:3001/get-posts"),
+      ]);
+
+      const usersData = await usersResponse.json();
+      const postsData = await postsResponse.json();
+
+      setAttestedUsers(usersData.filter((user) => user.attestationId));
+      setAttestedPosts(postsData.filter((post) => post.attestationId));
+    } catch (error) {
+      console.error("Error fetching attested data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
   useEffect(() => {
-    const fetchAttestedData = async () => {
-      try {
-        const [usersResponse, postsResponse] = await Promise.all([
-          fetch("http://localhost:3001/get-registrations"),
-          fetch("http://localhost:3001/get-posts"),
-        ]);
-
-        const usersData = await usersResponse.json();
-        const postsData = await postsResponse.json();
-
-        setAttestedUsers(usersData.filter((user) => user.attestationId));
-        setAttestedPosts(postsData.filter((post) => post.attestationId));
-      } catch (error) {
-        console.error("Error fetching attested data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchAttestedData();
+    fetchAttestations();
   }, []);
 
   const handleCommentChange = (type, id, event) => {
@@ -228,6 +280,27 @@ export default function All() {
               </div>
             ))}
           </div>
+        </div>
+      </div>
+      <div className="w-full p-4 rounded-lg shadow-lg overflow-y-auto h-96 mt-6">
+        <h2 className="text-xl text-black font-bold mb-4">
+          Attestation Reactions
+        </h2>
+        <div className="grid grid-cols-3 gap-4">
+          {attestationDetails.map((attestation) => (
+            <div key={attestation.id} className="bg-gray-200 p-4 rounded-lg">
+              <div className="mb-2 text-black">
+                <strong>ID:</strong> {attestation.id}
+              </div>
+              <div className="mb-2 text-black">
+                <strong>Data:</strong> {attestation.data}
+              </div>
+              <div className="mb-2 text-black">
+                <strong>Timestamp:</strong>{" "}
+                {new Date(attestation.timestamp * 1000).toLocaleString()}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
