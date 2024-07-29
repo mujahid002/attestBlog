@@ -9,7 +9,8 @@ export default function Register() {
   const [formData, setFormData] = useState({
     username: "",
     bio: "",
-    profilePicture: "https://via.placeholder.com/150", // default image link
+    profilePicture:
+      "https://app.ardrive.io/#/file/28b6d9b7-519c-4062-9719-3f3ef9e4dc20/view", // default image link
   });
   const [registrationStatus, setRegistrationStatus] = useState(null); // null, 'approved', 'pending', 'not-registered', 'attested'
   const [loading, setLoading] = useState(true);

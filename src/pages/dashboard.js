@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import { useGlobalContext } from "../context/Store";
 import WalletConnect from "../components/walletConnection";
 import { postAttest } from "../attest/postAttest"; // Assuming the userAttest function is in utils folder
+import { useRouter } from "next/router";
 
 export default function Dashboard() {
+  const router = useRouter();
   const { userAddress } = useGlobalContext();
   const [formData, setFormData] = useState({
     theme: "",
@@ -210,7 +212,7 @@ export default function Dashboard() {
                         Your post is attested!
                       </div>
                       <button
-                        onClick={() => router.push("/all-posts")}
+                        onClick={() => router.push("/all")}
                         className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
                       >
                         Go to All Posts
