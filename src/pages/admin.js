@@ -167,8 +167,14 @@ export default function Admin() {
                   <div className="flex items-center justify-between">
                     <button
                       onClick={() => handleApproveRegistration(reg.userAddress)}
-                      className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                      disabled={disabledButtons[reg.userAddress]}
+                      className={`font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline ${
+                        reg.approved || disabledButtons[reg.userAddress]
+                          ? "bg-gray-500 text-white"
+                          : "bg-blue-500 hover:bg-blue-700 text-white"
+                      }`}
+                      disabled={
+                        reg.approved || disabledButtons[reg.userAddress]
+                      }
                     >
                       Approve
                     </button>
@@ -176,8 +182,14 @@ export default function Admin() {
                       onClick={() =>
                         handleDisapproveRegistration(reg.userAddress)
                       }
-                      className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                      disabled={disabledButtons[reg.userAddress]}
+                      className={`font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline ${
+                        !reg.approved || disabledButtons[reg.userAddress]
+                          ? "bg-gray-500 text-white"
+                          : "bg-red-500 hover:bg-red-700 text-white"
+                      }`}
+                      disabled={
+                        !reg.approved || disabledButtons[reg.userAddress]
+                      }
                     >
                       Disapprove
                     </button>
@@ -213,15 +225,23 @@ export default function Admin() {
                   <div className="flex items-center justify-between">
                     <button
                       onClick={() => handleApprovePost(post.author)}
-                      className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                      disabled={disabledButtons[post.author]}
+                      className={`font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline ${
+                        post.approved || disabledButtons[post.author]
+                          ? "bg-gray-500 text-white"
+                          : "bg-green-500 hover:bg-green-700 text-white"
+                      }`}
+                      disabled={post.approved || disabledButtons[post.author]}
                     >
                       Approve
                     </button>
                     <button
                       onClick={() => handleDisapprovePost(post.author)}
-                      className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                      disabled={disabledButtons[post.author]}
+                      className={`font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline ${
+                        !post.approved || disabledButtons[post.author]
+                          ? "bg-gray-500 text-white"
+                          : "bg-red-500 hover:bg-red-700 text-white"
+                      }`}
+                      disabled={!post.approved || disabledButtons[post.author]}
                     >
                       Disapprove
                     </button>
