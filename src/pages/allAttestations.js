@@ -203,6 +203,9 @@ export default function AllAttestations() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
+      <p className="mb-4 mt-4 text-green-500">
+        Connected Wallet: {userAddress}
+      </p>
       {!userAddress && <WalletConnect />}
       <div className="w-full max-w-7xl bg-white p-6 rounded-lg shadow-md flex flex-col space-y-4 overflow-x-auto">
         <div className="w-full p-4 rounded-lg shadow-lg overflow-y-auto h-96">

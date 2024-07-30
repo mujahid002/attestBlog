@@ -206,6 +206,7 @@ export default function All() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
       {!userAddress && <WalletConnect />}
+        <p className="mb-4 text-green-500">Connected Wallet: {userAddress}</p>
       <div className="w-full max-w-7xl bg-white p-6 rounded-lg shadow-md flex space-x-4 overflow-x-auto">
         <div className="w-1/2 p-4 rounded-lg shadow-lg overflow-y-auto h-96">
           <h2 className="text-xl text-black font-bold mb-4">Attested Users</h2>
