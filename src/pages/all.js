@@ -83,7 +83,7 @@ export default function All() {
   };
   useEffect(() => {
     fetchAttestedData();
-    fetchAttestations();
+    // fetchAttestations();
   }, []);
 
   const handleCommentChange = (type, id, event) => {
@@ -282,7 +282,7 @@ export default function All() {
           </div>
         </div>
       </div>
-      <div className="w-full p-4 rounded-lg shadow-lg overflow-y-auto h-96 mt-6">
+      {/* <div className="w-full p-4 rounded-lg shadow-lg overflow-y-auto h-96 mt-6">
         <h2 className="text-xl text-black font-bold mb-4">
           Attestation Reactions
         </h2>
@@ -302,7 +302,7 @@ export default function All() {
             </div>
           ))}
         </div>
-      </div>
+      </div> */}
     </div>
   );
 }
