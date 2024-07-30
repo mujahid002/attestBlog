@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useGlobalContext } from "../context/Store";
 import WalletConnect from "../components/walletConnection";
 import { reactionAttest } from "@/attest/reactionAttest";
+import { useRouter } from "next/router";
 
 import {
   EAS as EAS150,
@@ -11,6 +12,7 @@ import { ethers } from "ethers";
 import { easContractAddress, provider } from "@/constants/index";
 
 export default function All() {
+  const router = useRouter();
   const { userAddress } = useGlobalContext();
   const [attestedUsers, setAttestedUsers] = useState([]);
   const [attestedPosts, setAttestedPosts] = useState([]);
@@ -281,6 +283,14 @@ export default function All() {
             ))}
           </div>
         </div>
+      </div>
+      <div>
+        <button
+          onClick={() => router.push("/allAttestations")}
+          className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mt-4"
+        >
+          All Attestations
+        </button>
       </div>
       {/* <div className="w-full p-4 rounded-lg shadow-lg overflow-y-auto h-96 mt-6">
         <h2 className="text-xl text-black font-bold mb-4">
