@@ -4,7 +4,13 @@ import dotenv from "dotenv";
 // Load environment variables
 dotenv.config();
 
-export const provider = new ethers.BrowserProvider(window.ethereum);
+export const provider = async () => {
+  if (window.ethereum) {
+    return new ethers.BrowserProvider(window.ethereum);
+  } else {
+    throw new error("Unable to get Provider");
+  }
+};
 
 // Initialize Web3Provider
 export const easProvider = async () => {
