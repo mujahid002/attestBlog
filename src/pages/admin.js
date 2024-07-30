@@ -140,7 +140,8 @@ export default function Admin() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
+      <p className="mb-4 text-green-500">Connected Admin Wallet: {userAddress}</p>
       <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-5xl flex space-x-4">
         <div className="w-1/2 bg-gray-50 p-4 rounded-lg shadow-lg overflow-y-auto h-96">
           <h2 className="text-xl text-black font-bold mb-4">
